@@ -1,0 +1,11 @@
+{
+  "name": "coldbrew",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Coldbrew: approval-first outreach for local businesses. Finds prospects, helps you write short honest messages, holds every draft for your approval, reads the replies. It never sends anything itself.",
+  "license": "MIT",
+  "engines": { "node": ">=22.13" },
+  "scripts": { "start": "node src/server.mjs", "test": "node --test test/" },
+  "optionalDependencies": { "imapflow": "^1.7.8", "mailparser": "^3.14.2" },
+  "keywords": ["outreach", "lead-generation", "local-business", "prospecting", "self-hosted", "local-first", "sqlite"]
+}
