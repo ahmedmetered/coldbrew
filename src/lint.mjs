@@ -23,6 +23,7 @@ export function lintDraft({ subject = "", body = "", step = 1, persona = {}, fac
   const issues = [], add = (code, text, severity = "error") => issues.push({ code, severity, text });
   body = String(body).replace(/\r\n/g, "\n"); subject = String(subject).trim();
   const optout = String(persona.optout || "").trim();
+  const dm = !!prospect.channel && prospect.channel !== "email"; // a DM has no subject and no email footer
   const core = optout ? body.replace(optout, "") : body;               // the opt-out line is required, so it does not count against the cap
   const words = countWords(core), cap = WORD_CAPS[step] || 40, lower = `${subject}\n${body}`.toLowerCase();
 
@@ -32,7 +33,8 @@ export function lintDraft({ subject = "", body = "", step = 1, persona = {}, fac
 
   // subject: lowercase, 2-5 words, no recipient name, honest, new for each step
   const sw = countWords(subject);
-  if (!subject) add("subject_missing", "Add a subject.");
+  if (dm) { /* no subject on a DM */ }
+  else if (!subject) add("subject_missing", "Add a subject.");
   else {
     if (sw < 2 || sw > 5) add("subject_length", `The subject has ${sw} words; use 2 to 5.`);
     if (subject !== subject.toLowerCase()) add("subject_case", "Write the subject in lowercase, like an internal email.");
@@ -78,7 +80,7 @@ export function lintDraft({ subject = "", body = "", step = 1, persona = {}, fac
     if (/^\d{1,2}$/.test(num)) continue; // small counts like "two" written as digits are not claims
     if (!allowed.includes(num.toLowerCase().replace(/\s+/g, "")) && !allowed.replace(/\s+/g, "").includes(num.toLowerCase().replace(/\s+/g, ""))) add("untraced_number", `"${num}" is not in your profile or in what their site says. Use a number you can show, or leave it out.`);
   }
-  if (persona.requireOptout && optout && !body.includes(optout)) add("optout_missing", "Add your opt-out line (it is required for this campaign).");
+  if (!dm && persona.requireOptout && optout && !body.includes(optout)) add("optout_missing", "Add your opt-out line (it is required for this campaign).");
 
   const errors = issues.filter(i => i.severity === "error");
   return { ok: errors.length === 0, words, cap, issues };
