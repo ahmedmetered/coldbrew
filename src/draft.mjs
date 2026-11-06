@@ -38,6 +38,16 @@ Return exactly two lines of output:
 SUBJECT: <subject>
 BODY: <body text, may span several lines>`;
 
+// the facts, limits and claims for one message, as plain text: sent to a model, or copied for the user's own AI agent
+export function briefText({ step = 1, lang = "it", prospect, facts = [], persona = {}, angle = "" }) {
+  const cap = WORD_CAPS[step] || 40, usable = facts;
+  return `LANGUAGE: ${lang === "it" ? "Italian" : "English"}\nWORD LIMIT: ${cap}\nMESSAGE NUMBER: ${step}${angle ? `\nANGLE: ${angle}` : ""}\nBUSINESS: ${prospect.name} (${prospect.category || "local business"}, ${prospect.city || ""})\nFACTS FROM THEIR OWN SITE:\n${usable.map(f => `- ${f.text}`).join("\n") || "- (none)"}\nWHO IS WRITING: ${persona.sender || "the sender"}\nCLAIMS ALLOWED: ${(persona.claims || []).join("; ") || "none"}`;
+}
+export const agentBrief = args => `${SYSTEM}
+
+--- THIS MESSAGE ---
+${briefText({ ...args, facts: observationCandidates(args.facts || []) })}`;
+
 export function parseModelDraft(out) {
   const s = String(out).match(/SUBJECT:\s*(.+)/i), b = String(out).match(/BODY:\s*([\s\S]+)/i);
   if (!s || !b) return null;
@@ -48,7 +58,7 @@ export function parseModelDraft(out) {
 export async function aiDraft(cfg, { step = 1, lang = "it", prospect, facts = [], persona = {}, angle = "" }, fetchImpl = fetch) {
   const cap = WORD_CAPS[step] || 40, usable = observationCandidates(facts);
   if (!usable.length && step === 1) throw new Error("There is nothing specific to say about this business yet. Enrich it first, or write the message yourself.");
-  const brief = `LANGUAGE: ${lang === "it" ? "Italian" : "English"}\nWORD LIMIT: ${cap}\nMESSAGE NUMBER: ${step}${angle ? `\nANGLE: ${angle}` : ""}\nBUSINESS: ${prospect.name} (${prospect.category || "local business"}, ${prospect.city || ""})\nFACTS FROM THEIR OWN SITE:\n${usable.map(f => `- ${f.text}`).join("\n") || "- (none)"}\nWHO IS WRITING: ${persona.sender || "the sender"}\nCLAIMS ALLOWED: ${(persona.claims || []).join("; ") || "none"}`;
+  const brief = briefText({ step, lang, prospect, facts: usable, persona, angle });
   let out = parseModelDraft(await call(cfg, SYSTEM, brief, fetchImpl)), report = out && lintDraft({ ...out, step, persona, facts, prospect });
   if (out && !report.ok) {
     const fixed = parseModelDraft(await call(cfg, SYSTEM, `${brief}\n\nYOUR PREVIOUS DRAFT:\nSUBJECT: ${out.subject}\nBODY: ${out.body}\n\nFIX THESE PROBLEMS AND RETURN THE SAME TWO LINES:\n${report.issues.filter(i => i.severity === "error").map(i => "- " + i.text).join("\n")}`, fetchImpl));

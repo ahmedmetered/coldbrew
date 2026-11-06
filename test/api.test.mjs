@@ -85,3 +85,18 @@ test("mail settings are stored encrypted and never returned", async () => {
     assert.equal((await s.call("POST", "/api/mail/check", {})).status === 200, false);
   } finally { s.close(); }
 });
+
+test("the agent brief carries the rules, the facts and only the allowed claims, and needs no AI key", async () => {
+  const s = await boot();
+  try {
+    await s.call("POST", "/api/signup", { email: "b@example.com", password: "correct horse battery" });
+    const cid = (await s.call("POST", "/api/campaigns", { name: "Dentisti", vertical: "dentisti", place: "Milano", language: "it", persona: PERSONA })).json.id;
+    await s.call("POST", `/api/campaigns/${cid}/import`, { csv: CSV });
+    const pid = (await s.call("GET", "/api/prospects?q=rossi")).json.prospects[0].id;
+    await s.call("POST", `/api/prospects/${pid}/enrich`);
+    const r = await s.call("GET", `/api/prospects/${pid}/brief?step=1`);
+    assert.equal(r.status, 200);
+    assert.match(r.json.brief, /SUBJECT:/); assert.match(r.json.brief, /LANGUAGE: Italian/); assert.match(r.json.brief, /WORD LIMIT: 75/); assert.match(r.json.brief, /Studio Rossi/); assert.match(r.json.brief, /gestisce le prenotazioni di 12 cliniche/);
+    assert.equal((await s.call("GET", "/api/prospects/9999/brief")).status, 404);
+  } finally { s.close(); }
+});

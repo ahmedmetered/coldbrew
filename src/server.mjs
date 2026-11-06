@@ -9,7 +9,7 @@ import * as auth from "./auth.mjs";
 import * as core from "./core.mjs";
 import { parseProspectCsv, selectorsFor, OSM_CATEGORIES } from "./sources.mjs";
 import { lintDraft } from "./lint.mjs";
-import { skeleton, aiDraft, observationCandidates } from "./draft.mjs";
+import { skeleton, aiDraft, observationCandidates, agentBrief } from "./draft.mjs";
 import { aiConfigFromInput, ollamaModels, AI_PROVIDERS } from "./ai.mjs";
 import { processIncoming } from "./replies.mjs";
 import { accountConfig, accountFromInput, testLogin, checkReplies, PROVIDERS } from "./mail.mjs";
@@ -174,6 +174,10 @@ export function createApp(db, { secureCookies = false, aiFetch = fetch, osmFetch
     if (p === "/api/lint" && method === "POST") {
       const pr = core.getProspect(db, uid, body.prospectId); const c = pr && core.getCampaign(db, uid, pr.campaign_id);
       return sendJson(res, 200, lintDraft({ subject: body.subject, body: body.body, step: +body.step || 1, persona: c?.persona || {}, facts: pr ? core.factsOf(db, pr.id) : [], prospect: pr || {} }));
+    }
+    if ((m = p.match(/^\/api\/prospects\/(\d+)\/brief$/)) && method === "GET") { // text for the user's own AI agent; no key needed
+      const pr = core.getProspect(db, uid, m[1]); if (!pr) throw auth.httpErr(404, "Prospect not found."); const c = core.getCampaign(db, uid, pr.campaign_id), step = Math.min(Math.max(+url.searchParams.get("step") || 1, 1), core.MAX_STEP);
+      return sendJson(res, 200, { brief: agentBrief({ step, lang: c.language, prospect: pr, facts: core.factsOf(db, pr.id), persona: c.persona }) });
     }
     if (p === "/api/drafts" && method === "POST") {
       const pr = core.getProspect(db, uid, body.prospectId); if (!pr) throw auth.httpErr(404, "Prospect not found.");

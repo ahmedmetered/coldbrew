@@ -46,7 +46,7 @@ then add prospects.
    (gosom, in Docker) can be run from the app, or you can import its CSV. Duplicates merge, filters run before ranking, and the
    score favours businesses you can actually reach.
 3. **Read their site.** At most three pages of the business's own site, robots.txt respected, for email, phone, social links and things worth mentioning.
-4. **Draft.** From a template, by hand, or with an optional model (Ollama locally, or your own key). Always linted.
+4. **Draft.** From a template, by hand, with an optional model (Ollama locally, or your own key), or with the AI agent you already use: "Copy brief for my AI agent" hands it the facts, limits and rules (see `skills/outreach`, the Harvey-derived method). Always linted.
 5. **Approve and send.** Approved drafts open in your mail app or copy to the clipboard. You send, then press "I sent it".
 6. **Follow-ups.** Message 2 around day 5, message 3 around day 10, a breakup around day 14, each waiting for your approval. A reply ends the sequence.
 7. **Replies.** Read-only IMAP, and optionally Instagram (Instagram API with Instagram Login, read-only), match replies to prospects and classify them (interested, question, objection, wrong person, not interested, opt-out, angry or legal). Instagram does nothing until you connect a token.
