@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coldbrew</title>
+<link rel="icon" type="image/svg+xml" href="/mark.svg">
+<style>
+  @font-face { font-family:"Schibsted Grotesk"; src:url(/fonts/schibsted.woff2) format("woff2"); font-weight:400 900; font-display:swap; }
+  /* Coldbrew: a slow-brewed workbench. Espresso by default after dark, crema by day; one action colour (caramel). */
+  :root { --bg:#F5EEE4; --rail:#EBE1D3; --panel:#FFFBF5; --panel-2:#F8F0E5; --line:#E1D4C2; --line-2:#CDBBA3; --ink:#2B1D14; --ink-2:#5E4A3B; --ink-3:#7A6655;
+    --accent:#A86A2E; --accent-ink:#FFFBF5; --accent-soft:#F0DFC8; --good:#4F7A4D; --good-soft:#E3EDDD; --info:#3E7A7B; --info-soft:#DCEBEA; --bad:#A8473A; --bad-soft:#F3DDD7; --warn:#9A6B12; --warn-soft:#F5E7C4;
+    --c1:#3B2619; --c2:#7A4A2A; --c3:#B98550; --c4:#E0C39B; --c5:#4F7A4D; --c6:#3E7A7B; --r:10px; --out:cubic-bezier(.16,1,.3,1);
+    --font:"Schibsted Grotesk","Segoe UI",system-ui,sans-serif; color-scheme:light; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#1B1410; --rail:#150F0C; --panel:#251B15; --panel-2:#2D2119; --line:#3A2C22; --line-2:#4D3A2D; --ink:#F1E7DA; --ink-2:#C2B09C; --ink-3:#A08E7B;
+    --accent:#D49A5A; --accent-ink:#1B1410; --accent-soft:#3A2A1B; --good:#8DB38B; --good-soft:#243222; --info:#74AEAD; --info-soft:#1F3331; --bad:#D9786A; --bad-soft:#3A211C; --warn:#D9AE55; --warn-soft:#38301A;
+    --c1:#F1E7DA; --c2:#D49A5A; --c3:#9B6B3D; --c4:#5E4330; --c5:#8DB38B; --c6:#74AEAD; color-scheme:dark; } }
+  :root[data-theme="dark"] { --bg:#1B1410; --rail:#150F0C; --panel:#251B15; --panel-2:#2D2119; --line:#3A2C22; --line-2:#4D3A2D; --ink:#F1E7DA; --ink-2:#C2B09C; --ink-3:#A08E7B;
+    --accent:#D49A5A; --accent-ink:#1B1410; --accent-soft:#3A2A1B; --good:#8DB38B; --good-soft:#243222; --info:#74AEAD; --info-soft:#1F3331; --bad:#D9786A; --bad-soft:#3A211C; --warn:#D9AE55; --warn-soft:#38301A;
+    --c1:#F1E7DA; --c2:#D49A5A; --c3:#9B6B3D; --c4:#5E4330; --c5:#8DB38B; --c6:#74AEAD; color-scheme:dark; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html { scrollbar-color:var(--line-2) var(--bg); }
+  body { font:15px/1.5 var(--font); background:var(--bg); color:var(--ink); min-height:100vh; caret-color:var(--accent); }
+  .kpi .n, td, th, .bar .val, .col .v, .score, svg.chart text, .count, .tag, .legend { font-variant-numeric:tabular-nums; }
+  ::selection { background:var(--accent); color:var(--accent-ink); }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
+  h1 { font-size:26px; font-weight:700; letter-spacing:-.02em; } h2 { font-size:17px; font-weight:650; letter-spacing:-.01em; } h3 { font-size:13px; font-weight:650; color:var(--ink-2); }
+  a { color:var(--accent); text-underline-offset:3px; }
+  .app { display:grid; grid-template-columns:232px minmax(0,1fr); min-height:100vh; }
+  .rail { background:var(--rail); border-right:1px solid var(--line); padding:20px 14px; display:flex; flex-direction:column; gap:4px; position:sticky; top:0; height:100vh; }
+  .brand { display:flex; align-items:center; gap:10px; padding:2px 10px 18px; font-weight:750; font-size:18px; letter-spacing:-.02em; }
+  .brand img { width:26px; height:26px; }
+  .nav a { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px; color:var(--ink-2); text-decoration:none; font-weight:550; cursor:pointer; transition:background .15s, color .15s; }
+  .nav a:hover { background:var(--panel-2); color:var(--ink); } .nav a.on { background:var(--panel); color:var(--ink); box-shadow:0 0 0 1px var(--line); }
+  .nav svg { width:18px; height:18px; flex:none; stroke:currentColor; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+  .nav .count { margin-left:auto; font-size:12px; background:var(--accent-soft); color:var(--accent); padding:1px 8px; border-radius:99px; font-weight:650; }
+  .rail .sp { flex:1; } .rail label { font-size:11.5px; color:var(--ink-3); margin:10px 10px 4px; display:block; font-weight:600; letter-spacing:.02em; }
+  .rail select { margin:0; } .who { font-size:12.5px; color:var(--ink-3); padding:8px 10px 0; word-break:break-all; }
+  main { padding:28px clamp(18px,3.2vw,44px) 90px; min-width:0; max-width:1320px; }
+  .head { display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:22px; } .head .sub { color:var(--ink-2); margin-top:4px; max-width:70ch; } .head .sp { flex:1; }
+  button, .btn { font:600 13.5px var(--font); color:var(--ink); background:var(--panel); border:1px solid var(--line-2); border-radius:8px; padding:8px 14px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:7px; transition:background .15s, border-color .15s, transform .15s var(--out); }
+  button:hover, .btn:hover { background:var(--panel-2); border-color:var(--ink-3); } button:active { transform:translateY(1px); } button:disabled { opacity:.5; cursor:default; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); } button.primary:hover { filter:brightness(1.07); }
+  button.danger { color:var(--bad); } button.danger:hover { background:var(--bad-soft); border-color:var(--bad); }
+  button.ghost { background:none; border-color:transparent; color:var(--ink-2); padding:6px 8px; } button.ghost:hover { background:var(--panel-2); }
+  button.on { background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:18px; }
+  .card + .card { margin-top:14px; } .card h2 { margin-bottom:12px; }
+  .grid { display:grid; gap:14px; } .g2 { grid-template-columns:repeat(2,minmax(0,1fr)); } .g3 { grid-template-columns:repeat(3,minmax(0,1fr)); } .g-auto { grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; } .muted { color:var(--ink-2); } .tiny { color:var(--ink-3); font-size:12.5px; } .sp { flex:1; }
+  label { display:block; font-size:12.5px; font-weight:600; color:var(--ink-2); margin-bottom:4px; }
+  input, select, textarea { width:100%; font:400 14px var(--font); color:var(--ink); background:var(--bg); border:1px solid var(--line-2); border-radius:8px; padding:8px 11px; accent-color:var(--accent); }
+  textarea { line-height:1.5; resize:vertical; } input:focus, select:focus, textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  input[type=checkbox] { width:16px; height:16px; margin:0; } .check { display:flex; align-items:center; gap:8px; font-weight:500; color:var(--ink); margin:5px 0; }
+  .tag { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600; padding:2px 9px; border-radius:99px; background:var(--panel-2); color:var(--ink-2); border:1px solid var(--line); white-space:nowrap; }
+  .tag.good { background:var(--good-soft); color:var(--good); border-color:transparent; } .tag.info { background:var(--info-soft); color:var(--info); border-color:transparent; } .tag.warn { background:var(--warn-soft); color:var(--warn); border-color:transparent; }
+  .tag.bad { background:var(--bad-soft); color:var(--bad); border-color:transparent; } .tag.accent { background:var(--accent-soft); color:var(--accent); border-color:transparent; }
+  .err { color:var(--bad); font-weight:600; font-size:13.5px; min-height:20px; margin-top:8px; }
+
+  /* figures and charts */
+  .kpis { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
+  .kpi { background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:14px 16px; } .kpi .n { font-size:30px; font-weight:700; letter-spacing:-.03em; line-height:1.1; } .kpi .l { color:var(--ink-2); font-size:13px; margin-top:2px; } .kpi .d { color:var(--ink-3); font-size:12px; margin-top:6px; }
+  .chart-title { display:flex; align-items:baseline; gap:10px; margin-bottom:10px; } .chart-title .tiny { margin-left:auto; }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; font-size:12.5px; color:var(--ink-2); margin:8px 0 0; } .legend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
+  .bars { display:grid; gap:9px; } .bar { display:grid; grid-template-columns:128px minmax(0,1fr) 78px; gap:10px; align-items:center; font-size:13.5px; } .bar .lab { color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bar .track { display:block; height:12px; background:var(--panel-2); border-radius:99px; overflow:hidden; } .bar .fill { display:block; height:100%; border-radius:99px; background:var(--c3); transition:width .9s var(--out); } .bar .val { text-align:right; font-weight:650; } .bar .val small { color:var(--ink-3); font-weight:500; }
+  .cols { display:flex; align-items:flex-end; gap:10px; height:150px; padding-top:8px; } .col { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; height:100%; min-width:0; }
+  .col .stick { display:block; width:100%; max-width:56px; background:var(--c3); border-radius:6px 6px 2px 2px; min-height:2px; transition:height .9s var(--out); } .col .v { font-size:12.5px; font-weight:650; } .col .l { font-size:11.5px; color:var(--ink-3); text-align:center; line-height:1.2; }
+  svg.chart text { fill:var(--ink-3); font:11px var(--font); } svg.chart .grid line { stroke:var(--line); stroke-width:1; }
+  .donut-wrap { display:flex; gap:18px; align-items:center; flex-wrap:wrap; } .donut-legend { display:grid; gap:6px; font-size:13.5px; } .donut-legend span { display:flex; align-items:center; gap:8px; } .donut-legend i { width:10px; height:10px; border-radius:3px; display:inline-block; }
+  .empty { color:var(--ink-3); padding:22px 6px; text-align:center; }
+  .note { background:var(--panel-2); border:1px solid var(--line); border-radius:var(--r); padding:12px 14px; color:var(--ink-2); font-size:14px; }
+
+  /* tables and filters */
+  .filters { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; } .filters select, .filters input { width:auto; min-width:120px; padding:7px 10px; font-size:13.5px; } .filters .grow { flex:1 1 240px; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; } .chips button { padding:5px 11px; font-size:13px; border-radius:99px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; } th { text-align:left; font-size:12px; color:var(--ink-3); font-weight:650; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  td { padding:10px; border-bottom:1px solid var(--line); vertical-align:middle; } tbody tr { cursor:pointer; transition:background .12s; } tbody tr:hover { background:var(--panel-2); } tbody tr.sel { background:var(--accent-soft); }
+  td .nm { font-weight:650; } td .sm { color:var(--ink-3); font-size:12.5px; } .score { display:inline-flex; align-items:center; gap:8px; font-weight:650; } .score i { display:inline-block; width:44px; height:6px; border-radius:99px; background:var(--panel-2); overflow:hidden; position:relative; } .score i b { position:absolute; inset:0 auto 0 0; background:var(--c3); border-radius:99px; }
+  .bulk { position:sticky; top:8px; z-index:4; display:flex; gap:8px; flex-wrap:wrap; align-items:center; background:var(--panel); border:1px solid var(--accent); border-radius:var(--r); padding:8px 12px; margin:0 0 10px; box-shadow:0 8px 24px -12px rgba(0,0,0,.4); }
+  .tablewrap { overflow-x:auto; border:1px solid var(--line); border-radius:var(--r); background:var(--panel); }
+
+  /* drawer, outbox, dialogs */
+  .drawer-back { position:fixed; inset:0; background:rgba(10,6,3,.45); z-index:20; animation:fade .2s ease both; } .drawer { position:fixed; top:0; right:0; bottom:0; width:min(640px,100%); background:var(--bg); border-left:1px solid var(--line-2); z-index:21; overflow:auto; padding:22px 24px 60px; animation:slide .3s var(--out) both; }
+  .drawer h2 { font-size:20px; } .sec { margin-top:20px; } .sec h3 { margin-bottom:8px; text-transform:uppercase; letter-spacing:.06em; font-size:11.5px; }
+  .kv { display:grid; grid-template-columns:110px minmax(0,1fr); gap:6px 12px; font-size:14px; } .kv dt { color:var(--ink-3); } .kv dd { word-break:break-word; }
+  .draft { border:1px solid var(--line); border-radius:var(--r); background:var(--panel); padding:16px; margin-bottom:12px; } .draft textarea { min-height:140px; font-size:14.5px; } .draft input { font-weight:600; }
+  .lint { margin:8px 0; display:grid; gap:4px; font-size:13.5px; } .lint div { padding-left:20px; position:relative; } .lint div:before { position:absolute; left:0; font-weight:800; } .lint .error:before { content:"×"; color:var(--bad); } .lint .warning:before { content:"!"; color:var(--warn); } .lint .okline:before { content:"✓"; color:var(--good); }
+  .thread { display:grid; gap:8px; } .msg { background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:10px 12px; font-size:14px; white-space:pre-wrap; } .msg.in { border-left:3px solid var(--good); } .msg small { display:block; color:var(--ink-3); margin-bottom:4px; }
+  .modal-back { position:fixed; inset:0; background:rgba(10,6,3,.55); display:grid; place-items:center; z-index:40; padding:16px; animation:fade .2s ease both; } .modal { background:var(--panel); border:1px solid var(--line-2); border-radius:12px; padding:22px; width:min(460px,100%); box-shadow:0 30px 70px -20px rgba(0,0,0,.6); } .modal h2 { margin-bottom:6px; } .modal p { color:var(--ink-2); margin-bottom:12px; } .modal .row { justify-content:flex-end; margin-top:16px; }
+  .toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:10px 18px; border-radius:99px; font-weight:600; font-size:14px; z-index:50; animation:rise .35s var(--out) both; }
+  .auth { max-width:400px; margin:12vh auto 0; padding:0 18px; } .auth .brand { padding:0 0 18px; font-size:22px; } .auth p { color:var(--ink-2); margin:6px 0 18px; }
+  .step { display:flex; gap:12px; align-items:flex-start; } .step b { flex:none; width:26px; height:26px; border-radius:99px; background:var(--accent-soft); color:var(--accent); display:grid; place-items:center; font-size:13px; }
+  @keyframes fade { from { opacity:0; } to { opacity:1; } } @keyframes slide { from { transform:translateX(24px); opacity:0; } to { transform:none; opacity:1; } } @keyframes rise { from { transform:translate(-50%,10px); opacity:0; } to { transform:translate(-50%,0); opacity:1; } }
+  .fadein { animation:fadeup .5s var(--out) both; animation-delay:calc(var(--i,0) * 60ms); } @keyframes fadeup { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+  @media (max-width: 1100px) { .kpis { grid-template-columns:repeat(3,minmax(0,1fr)); } .g3 { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media (max-width: 860px) { .app { grid-template-columns:1fr; } .rail { position:static; height:auto; flex-direction:row; flex-wrap:wrap; align-items:center; padding:10px 12px; } .rail .sp, .rail .who, .rail label { display:none; } .brand { padding:0 10px 0 0; } .nav { display:flex; flex-wrap:wrap; gap:2px; } .g2, .g3 { grid-template-columns:1fr; } .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .rail select { width:auto; } }
+  @media (prefers-reduced-motion: reduce) { *, *:before, *:after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+"use strict";
+const h = (tag, attrs, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k === "class") e.className = v; else if (k === "value") e.value = v; else if (k === "checked") e.checked = !!v;
+    else e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat(Infinity)) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c)));
+  return e;
+};
+const svg = (tag, attrs, ...kids) => { const e = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const [k, v] of Object.entries(attrs || {})) if (v != null) e.setAttribute(k, v); for (const c of kids.flat(Infinity)) if (c != null) e.append(c.nodeType ? c : document.createTextNode(String(c))); return e; };
+const $app = document.getElementById("app");
+const store = { get(k, d) { try { return JSON.parse(localStorage.getItem("cb." + k)) ?? d; } catch { return d; } }, set(k, v) { try { localStorage.setItem("cb." + k, JSON.stringify(v)); } catch { /* private mode */ } } };
+const state = { me: null, meta: null, campaigns: [], cid: store.get("cid", null), tf: store.get("tf", {}), sel: new Set(), views: {}, drawer: null };
+
+async function api(path, method = "GET", body) {
+  const r = await fetch("/api" + path, { method, headers: body ? { "content-type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(j.error || "Something went wrong."); e.status = r.status; throw e; }
+  return j;
+}
+let toastEl; function toast(t) { toastEl?.remove(); toastEl = h("div", { class: "toast", role: "status" }, t); document.body.append(toastEl); setTimeout(() => toastEl?.remove(), 3200); }
+function ask({ title, text, input = false, textarea = false, placeholder = "", value = "", ok = "OK", danger = false }) {
+  return new Promise(resolve => {
+    const field = input ? (textarea ? h("textarea", { rows: "6", placeholder, value }) : h("input", { placeholder, value })) : null, back = h("div", { class: "modal-back" });
+    const close = v => { back.remove(); document.removeEventListener("keydown", onKey); resolve(v); }, done = () => close(input ? field.value : true);
+    const onKey = e => { if (e.key === "Escape") close(null); if (e.key === "Enter" && input && !textarea) done(); };
+    back.append(h("div", { class: "modal", role: "dialog", "aria-modal": "true", "aria-label": title }, h("h2", {}, title), text ? h("p", {}, text) : null, field, h("div", { class: "row" }, h("button", { onclick: () => close(null) }, "Cancel"), h("button", { class: danger ? "danger" : "primary", onclick: done }, ok))));
+    back.addEventListener("mousedown", e => { if (e.target === back) close(null); }); document.addEventListener("keydown", onKey); document.body.append(back); (field || back.querySelector("button.primary, button.danger")).focus();
+  });
+}
+const ago = iso => { if (!iso) return ""; const d = Math.floor((Date.now() - Date.parse(iso)) / 864e5); return d <= 0 ? "today" : d === 1 ? "yesterday" : d + " days ago"; };
+const pct = (n, d) => (d ? Math.round(100 * n / d) : 0);
+const todayLabel = () => new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+
+// ---------- theme ----------
+function applyTheme() { const t = store.get("theme", "auto"); if (t === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", t); }
+applyTheme();
+const cycleTheme = () => { const order = ["auto", "light", "dark"], t = store.get("theme", "auto"); store.set("theme", order[(order.indexOf(t) + 1) % 3]); applyTheme(); toast("Theme: " + store.get("theme", "auto")); };
+
+// ---------- charts (plain SVG and CSS, values always printed next to the marks) ----------
+const PALETTE = ["var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)", "var(--c5)", "var(--c6)"];
+function hbars(rows, { unit = "", max = null, colour = "var(--c3)" } = {}) {
+  if (!rows.length) return h("div", { class: "empty" }, "Nothing to show yet.");
+  const m = max ?? Math.max(1, ...rows.map(r => r.value));
+  return h("div", { class: "bars", role: "list" }, rows.map(r => h("div", { class: "bar", role: "listitem" }, h("span", { class: "lab", title: r.label }, r.label), h("span", { class: "track" }, h("span", { class: "fill", style: `width:${Math.max(r.value ? 2 : 0, 100 * r.value / m)}%;background:${r.colour || colour}` })), h("span", { class: "val" }, r.value + unit, r.note ? h("small", {}, " " + r.note) : null))));
+}
+function columns(rows, colour = "var(--c3)") {
+  const m = Math.max(1, ...rows.map(r => r.n));
+  return h("div", { class: "cols", role: "list" }, rows.map(r => h("div", { class: "col", role: "listitem" }, h("span", { class: "v" }, r.n), h("span", { class: "stick", style: `height:${Math.max(r.n ? 3 : 0, 100 * r.n / m * .78)}%;background:${colour}` }), h("span", { class: "l" }, r.label))));
+}
+function donut(rows, size = 128) {
+  const total = rows.reduce((n, r) => n + r.n, 0); if (!total) return h("div", { class: "empty" }, "No data yet.");
+  const R = 46, C = 2 * Math.PI * R; let off = 0;
+  const arcs = rows.map((r, i) => { const len = C * r.n / total, a = svg("circle", { cx: 64, cy: 64, r: R, fill: "none", stroke: PALETTE[i % PALETTE.length], "stroke-width": 20, "stroke-dasharray": `${len} ${C - len}`, "stroke-dashoffset": -off, transform: "rotate(-90 64 64)" }); off += len; return a; });
+  return h("div", { class: "donut-wrap" }, svg("svg", { class: "chart", width: size, height: size, viewBox: "0 0 128 128", role: "img", "aria-label": rows.map(r => `${r.label} ${r.n}`).join(", ") }, arcs, svg("text", { x: 64, y: 62, "text-anchor": "middle", style: "font-size:22px;font-weight:700;fill:var(--ink)" }, total), svg("text", { x: 64, y: 80, "text-anchor": "middle" }, "total")),
+    h("div", { class: "donut-legend" }, rows.map((r, i) => h("span", {}, h("i", { style: `background:${PALETTE[i % PALETTE.length]}` }), `${r.label} `, h("b", {}, r.n)))));
+}
+function stacked(series, keys, labels) {
+  const W = 640, H = 190, pad = { l: 28, r: 6, t: 8, b: 22 }, iw = W - pad.l - pad.r, ih = H - pad.t - pad.b, n = series.length, bw = iw / n;
+  const totals = series.map(d => keys.reduce((s, k) => s + d[k], 0)), max = Math.max(4, ...totals), step = max <= 8 ? 2 : Math.ceil(max / 4 / 2) * 2, top = Math.ceil(max / step) * step;
+  const g = svg("g", { class: "grid" }); for (let v = 0; v <= top; v += step) { const y = pad.t + ih - ih * v / top; g.append(svg("line", { x1: pad.l, x2: W - pad.r, y1: y, y2: y }), svg("text", { x: pad.l - 6, y: y + 4, "text-anchor": "end" }, v)); }
+  const bars = svg("g", {});
+  series.forEach((d, i) => { let y = pad.t + ih; keys.forEach((k, ki) => { const hh = ih * d[k] / top; if (hh > 0) bars.append(svg("rect", { x: pad.l + i * bw + bw * .18, y: y - hh, width: bw * .64, height: hh, rx: 2, fill: PALETTE[[1, 2, 4, 5][ki]], }, svg("title", {}, `${d.day}: ${labels[ki]} ${d[k]}`))); y -= hh; }); });
+  const ticks = svg("g", {}); series.forEach((d, i) => { if (i % Math.ceil(n / 7) === 0) ticks.append(svg("text", { x: pad.l + i * bw + bw / 2, y: H - 6, "text-anchor": "middle" }, d.day.slice(5))); });
+  return h("div", {}, svg("svg", { class: "chart", viewBox: `0 0 ${W} ${H}`, width: "100%", role: "img", "aria-label": `Activity over the last ${n} days: ` + labels.map((l, i) => `${l} ${series.reduce((s, d) => s + d[keys[i]], 0)}`).join(", ") }, g, bars, ticks),
+    h("div", { class: "legend" }, labels.map((l, i) => h("span", {}, h("i", { style: `background:${PALETTE[[1, 2, 4, 5][i]]}` }), l))));
+}
+
+// ---------- shell, auth ----------
+const ICONS = { dashboard: "M4 13h6V4H4zM14 20h6V4h-6zM4 20h6v-3H4z", campaigns: "M4 6h16M4 12h16M4 18h10", prospects: "M16 11a4 4 0 1 0-8 0M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6", outbox: "M3 7l9 6 9-6M3 7v11h18V7M3 7l2-3h14l2 3", settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.4 2.3-.9c.6.5 1.3.9 2 1.2l.4 2.6h4l.4-2.6c.7-.3 1.4-.7 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z" };
+const icon = k => svg("svg", { viewBox: "0 0 24 24", "aria-hidden": "true" }, svg("path", { d: ICONS[k] }));
+function shell(active, badge, ...body) {
+  const item = (k, label, n) => h("a", { class: active === k ? "on" : "", href: "#/" + k, "aria-current": active === k ? "page" : null }, icon(k), label, n ? h("span", { class: "count" }, n) : null);
+  const picker = h("select", { "aria-label": "Campaign", onchange: e => { state.cid = e.target.value ? +e.target.value : null; store.set("cid", state.cid); state.tf = {}; store.set("tf", {}); render(); } }, h("option", { value: "" }, "All campaigns"), state.campaigns.map(c => h("option", { value: c.id, selected: c.id === state.cid }, c.name)));
+  return h("div", { class: "app" }, h("aside", { class: "rail" }, h("div", { class: "brand" }, h("img", { src: "/mark.svg", alt: "" }), "Coldbrew"),
+    h("nav", { class: "nav", "aria-label": "Main" }, item("dashboard", "Dashboard"), item("campaigns", "Campaigns"), item("prospects", "Prospects"), item("outbox", "Outbox", badge), item("settings", "Settings")),
+    h("div", { class: "sp" }), h("label", {}, "Campaign"), picker, h("div", { class: "row", style: "margin:12px 0 0" }, h("button", { class: "ghost", onclick: cycleTheme, title: "Switch between automatic, light and dark" }, "Theme"), h("button", { class: "ghost", onclick: async () => { await api("/logout", "POST"); state.me = null; render(); } }, "Sign out")), h("div", { class: "who" }, state.me.user.email)),
+    h("main", {}, ...body));
+}
+function renderAuth(mode = "in") {
+  const email = h("input", { type: "email", autocomplete: "email", placeholder: "you@example.com" }), pw = h("input", { type: "password", autocomplete: mode === "in" ? "current-password" : "new-password", placeholder: mode === "in" ? "Password" : "At least 10 characters" }), err = h("div", { class: "err" });
+  const go = async () => { err.textContent = ""; try { await api(mode === "in" ? "/login" : "/signup", "POST", { email: email.value, password: pw.value }); await boot(); } catch (e) { err.textContent = e.message; } };
+  pw.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
+  $app.replaceChildren(h("div", { class: "auth" }, h("div", { class: "brand" }, h("img", { src: "/mark.svg", alt: "" }), "Coldbrew"), h("h1", {}, "Outreach that waits for your yes."), h("p", {}, "Find local businesses, write short honest messages, approve each one yourself. Coldbrew never sends anything."),
+    h("div", { class: "card" }, h("label", {}, "Email"), email, h("div", { style: "height:10px" }), h("label", {}, "Password"), pw, err, h("div", { class: "row", style: "margin-top:12px" }, h("button", { class: "primary", onclick: go }, mode === "in" ? "Sign in" : "Create account"), h("button", { class: "ghost", onclick: () => renderAuth(mode === "in" ? "up" : "in") }, mode === "in" ? "New here? Create an account" : "Have an account? Sign in")))));
+}
+const campaignQuery = () => (state.cid ? `campaign=${state.cid}` : "");
+
+// ---------- dashboard ----------
+async function renderDashboard() {
+  const days = store.get("days", 30), i = await api(`/insights?days=${days}${state.cid ? "&campaign=" + state.cid : ""}`);
+  const waiting = i.outbox.draft, due = i.followUps, sentTotal = i.series.reduce((n, d) => n + d.sent, 0);
+  const sentence = i.total === 0 ? "No prospects yet. Create a campaign and run a sweep to get started." : [waiting ? `${waiting} draft${waiting > 1 ? "s" : ""} wait${waiting > 1 ? "" : "s"} for your approval` : "Nothing is waiting for your approval", i.outbox.approved ? `${i.outbox.approved} approved message${i.outbox.approved > 1 ? "s are" : " is"} ready to send` : null, due ? `${due} follow-up${due > 1 ? "s are" : " is"} due` : null].filter(Boolean).join(", ") + ".";
+  const kpi = (n, l, d, k) => h("div", { class: "kpi fadein", style: "--i:" + k }, h("div", { class: "n" }, n), h("div", { class: "l" }, l), d ? h("div", { class: "d" }, d) : null);
+  const stageRows = [["Found", "var(--c4)"], ["Drafted", "var(--c3)"], ["Approved", "var(--c3)"], ["Contacted", "var(--c2)"], ["Replied", "var(--c5)"], ["Meeting", "var(--c5)"], ["Won", "var(--c5)"], ["Lost", "var(--c4)"]].map(([k, c]) => ({ label: k, value: i.funnel[k], colour: c, note: i.total ? pct(i.funnel[k], i.total) + "%" : "" }));
+  const rate = rows => hbars(rows.map(r => ({ label: r.key, value: r.rate, note: `${r.replied}/${r.sent}` })), { unit: "%", max: Math.max(40, ...rows.map(r => r.rate)) });
+  const card = (title, sub, body, cls = "") => h("section", { class: "card fadein " + cls, style: "--i:6" }, h("div", { class: "chart-title" }, h("h2", { style: "margin:0" }, title), sub ? h("span", { class: "tiny" }, sub) : null), body);
+  const rangeBtn = d => h("button", { class: days === d ? "on" : "", onclick: () => { store.set("days", d); render(); } }, d + " days");
+  $app.replaceChildren(shell("dashboard", waiting + i.outbox.approved,
+    h("div", { class: "head" }, h("div", {}, h("h1", {}, "Dashboard"), h("p", { class: "sub" }, todayLabel() + ". " + sentence)), h("div", { class: "sp" }), h("div", { class: "row" }, rangeBtn(14), rangeBtn(30), rangeBtn(90))),
+    h("div", { class: "kpis" }, kpi(i.total, "prospects", `${i.dnc} do not contact`, 0), kpi(waiting + i.outbox.approved, "in the outbox", `${waiting} to approve, ${i.outbox.approved} to send`, 1), kpi(i.prospectsSent, "contacted", `${sentTotal} messages in ${days} days`, 2), kpi(i.replyRate == null ? "-" : i.replyRate + "%", "replied", `${i.replied} of ${i.prospectsSent}`, 3), kpi(i.meetings, "meetings", `${i.won} won`, 4), kpi(due, "follow-ups due", i.medianDaysToReply == null ? "" : `typical reply ${i.medianDaysToReply} days`, 5)),
+    h("div", { class: "grid g2" }, card("Activity", `last ${days} days`, stacked(i.series, ["drafted", "approved", "sent", "replies"], ["Drafted", "Approved", "Sent", "Replies"])), card("Where prospects are now", `${i.total} in total`, hbars(stageRows, { max: Math.max(1, ...stageRows.map(r => r.value)) }))),
+    h("div", { class: "grid g3", style: "margin-top:14px" }, card("Reply rate by message", "share of businesses that answered", i.byStep.length ? rate(i.byStep) : h("div", { class: "empty" }, "Send a first message to see this.")),
+      card("Reply rate by angle", "what you opened with", i.byAngle.filter(a => a.key !== "(none)").length ? rate(i.byAngle.filter(a => a.key !== "(none)")) : h("div", { class: "empty" }, "Name an angle on a draft to compare openings.")), card("Reply rate by category", "", i.byCategory.length ? rate(i.byCategory) : h("div", { class: "empty" }, "Nothing sent yet."))),
+    h("div", { class: "grid g3", style: "margin-top:14px" }, card("Time to a reply", "days after the first message", columns(i.hist)), card("What they said", "reply types", donut(Object.entries(i.intents).map(([k, n]) => ({ label: k.replace("_", " "), n })))),
+      card("Who you can reach", "channel per prospect", donut(i.channels.map(c => ({ label: c.key, n: c.n }))))),
+    h("div", { class: "grid g2", style: "margin-top:14px" }, card("Prospect quality", "score, 0 to 100", columns(i.scoreBands.map(b => ({ label: b.label, n: b.n })))), card("Where prospects came from", "found and kept per source", i.sources.length ? hbars(i.sources.map(s => ({ label: s.source, value: s.added, note: `of ${s.found} found` })), {}) : h("div", { class: "empty" }, "Run a sweep or import a list.")))));
+}
+
+// ---------- campaigns ----------
+async function renderCampaigns() {
+  const d = await api("/campaigns"); state.campaigns = d.campaigns;
+  const cards = d.campaigns.map((c, k) => h("div", { class: "card fadein", style: "--i:" + k }, h("div", { class: "row" }, h("h2", { style: "margin:0" }, c.name), h("span", { class: "tag " + (c.status === "active" ? "good" : "") }, c.status), h("span", { class: "tag" }, c.language === "it" ? "Italiano" : "English")), h("p", { class: "muted", style: "margin:6px 0 12px" }, [c.vertical, c.place].filter(Boolean).join(" in ") || "No vertical or place set"),
+    h("div", { class: "row", style: "margin-bottom:12px" }, h("span", { class: "tag" }, c.prospects + " prospects"), h("span", { class: "tag" }, c.contacted + " contacted"), h("span", { class: "tag good" }, c.replied + " replied")),
+    h("div", { class: "row" }, h("button", { class: "primary", onclick: () => { state.cid = c.id; store.set("cid", c.id); location.hash = "#/prospects"; } }, "Open prospects"), h("button", { onclick: () => campaignForm(c) }, "Settings and sources"), h("button", { class: "ghost danger", onclick: async () => { if (await ask({ title: "Delete this campaign?", text: "Its prospects, drafts and replies are deleted too. This cannot be undone.", ok: "Delete", danger: true })) { await api("/campaigns/" + c.id, "DELETE"); if (state.cid === c.id) { state.cid = null; store.set("cid", null); } render(); } } }, "Delete"))));
+  $app.replaceChildren(shell("campaigns", 0, h("div", { class: "head" }, h("div", {}, h("h1", {}, "Campaigns"), h("p", { class: "sub" }, "A campaign is one kind of business in one place, with the profile that decides what you may claim.")), h("div", { class: "sp" }), h("button", { class: "primary", onclick: () => campaignForm(null) }, "New campaign")),
+    cards.length ? h("div", { class: "grid g2" }, cards) : h("div", { class: "card" }, h("h2", {}, "Start with your first campaign"), h("p", { class: "muted" }, "Pick a kind of business and a city, say who you are and what you may truthfully claim, then run a sweep."), h("div", { style: "margin-top:12px" }, h("button", { class: "primary", onclick: () => campaignForm(null) }, "Create a campaign")))));
+}
+function campaignForm(c) {
+  const p = c?.persona || {}, f = c?.filters || {}, meta = state.meta;
+  const F = { name: h("input", { value: c?.name || "", placeholder: "e.g. Dentists in Milan" }), vertical: h("input", { value: c?.vertical || "", placeholder: "dentists" }), place: h("input", { value: c?.place || "", placeholder: "Milano and surroundings" }),
+    lang: h("select", {}, ["it", "en"].map(l => h("option", { value: l, selected: (c?.language || "it") === l }, l === "it" ? "Italian" : "English"))), sender: h("input", { value: p.sender || "", placeholder: "Your name" }), company: h("input", { value: p.company || "", placeholder: "Your company, if any" }),
+    product: h("input", { value: p.product || "", placeholder: "Product name (never used in email 1)" }), offer: h("textarea", { rows: "2", placeholder: "What you offer, in one plain sentence" }, p.offer || ""), icp: h("textarea", { rows: "2", placeholder: "Who you are looking for" }, p.icp || ""),
+    claims: h("textarea", { rows: "3", placeholder: "One claim per line. Only these may appear as facts about you." }, (p.claims || []).join("\n")), optout: h("input", { value: p.optout || "", placeholder: "e.g. Se preferisci non ricevere altri messaggi, basta dirmelo." }),
+    keep: h("input", { value: f.keep || "", placeholder: "dent|odont" }), drop: h("input", { value: f.drop || "", placeholder: "supermercato|centro commerciale" }) };
+  const flags = { requireOptout: p.requireOptout !== false, noBooking: !!p.icpRules?.noBooking, needContact: !!f.needContact };
+  const chk = (k, label) => h("label", { class: "check" }, h("input", { type: "checkbox", checked: flags[k], onchange: e => { flags[k] = e.target.checked; } }), label);
+  const err = h("div", { class: "err" });
+  const save = async () => { err.textContent = ""; const body = { name: F.name.value, vertical: F.vertical.value, place: F.place.value, language: F.lang.value, persona: { sender: F.sender.value, company: F.company.value, product: F.product.value, offer: F.offer.value, icp: F.icp.value, claims: F.claims.value, optout: F.optout.value, requireOptout: flags.requireOptout, icpRules: { noBooking: flags.noBooking } }, filters: { keep: F.keep.value, drop: F.drop.value, needContact: flags.needContact } };
+    try { const r = c ? await api("/campaigns/" + c.id, "PATCH", body) : await api("/campaigns", "POST", body); const id = c ? c.id : r.id; state.cid = id; store.set("cid", id); toast("Saved."); render(); } catch (e) { err.textContent = e.message; } };
+  const sweepCat = h("select", {}, meta.categories.map(k => h("option", { value: k }, k))), places = h("input", { placeholder: "Milano, Monza, Sesto San Giovanni" }), csv = h("textarea", { rows: "5", placeholder: "Paste CSV with a header row (name, category, website, email, phone, city...) or the Google Maps scraper's output" });
+  const result = h("div", { class: "tiny", style: "margin-top:8px;min-height:18px" });
+  const sweep = async b => { b.disabled = true; result.textContent = "Asking OpenStreetMap, one municipality at a time..."; try { const r = await api(`/campaigns/${c.id}/sweep`, "POST", { category: sweepCat.value, places: places.value }); result.textContent = `${r.found} found, ${r.added} new, ${r.merged} already known, ${r.filtered} filtered out${r.errors.length ? `. Problems: ${r.errors.join("; ")}` : ""}.`; } catch (e) { result.textContent = e.message; } b.disabled = false; };
+  const imp = async b => { b.disabled = true; try { const r = await api(`/campaigns/${c.id}/import`, "POST", { csv: csv.value }); result.textContent = `${r.parsed} rows read: ${r.added} new, ${r.merged} already known, ${r.filtered} filtered out, ${r.suppressed} on your do-not-contact list.`; } catch (e) { result.textContent = e.message; } b.disabled = false; };
+  $app.replaceChildren(shell("campaigns", 0, h("div", { class: "head" }, h("div", {}, h("h1", {}, c ? c.name : "New campaign"), h("p", { class: "sub" }, "The profile below is the only source of claims a draft may make about you.")), h("div", { class: "sp" }), h("button", { onclick: () => render() }, "Back")),
+    h("div", { class: "card" }, h("h2", {}, "The campaign"), h("div", { class: "grid g-auto" }, h("div", {}, h("label", {}, "Name"), F.name), h("div", {}, h("label", {}, "Kind of business"), F.vertical), h("div", {}, h("label", {}, "Place"), F.place), h("div", {}, h("label", {}, "Language of the messages"), F.lang))),
+    h("div", { class: "card" }, h("h2", {}, "Who is writing"), h("div", { class: "grid g-auto" }, h("div", {}, h("label", {}, "Sender"), F.sender), h("div", {}, h("label", {}, "Company"), F.company), h("div", {}, h("label", {}, "Product"), F.product)), h("div", { style: "margin-top:12px" }, h("label", {}, "Offer"), F.offer), h("div", { style: "margin-top:12px" }, h("label", {}, "Who you are looking for"), F.icp),
+      h("div", { style: "margin-top:12px" }, h("label", {}, "Claims you can back up"), F.claims), h("div", { style: "margin-top:12px" }, h("label", {}, "Opt-out line (added to the first messages)"), F.optout), chk("requireOptout", "Require the opt-out line in every first message"), chk("noBooking", "Rank businesses without online booking higher")),
+    h("div", { class: "card" }, h("h2", {}, "Which businesses count"), h("p", { class: "muted", style: "margin-bottom:10px" }, "These filters run before ranking, so supermarkets and chains do not crowd out your real prospects. Write them in the language of the category labels."), h("div", { class: "grid g2" }, h("div", {}, h("label", {}, "Keep categories matching"), F.keep), h("div", {}, h("label", {}, "Drop categories matching"), F.drop)), chk("needContact", "Only keep businesses with some way to reach them")),
+    err, h("div", { class: "row", style: "margin:12px 0 18px" }, h("button", { class: "primary", onclick: save }, c ? "Save" : "Create campaign")),
+    c ? h("div", { class: "card" }, h("h2", {}, "Find prospects"), h("div", { class: "grid g2" }, h("div", {}, h("h3", { style: "margin-bottom:8px" }, "OpenStreetMap (free, no account)"), h("label", {}, "Category"), sweepCat, h("div", { style: "height:8px" }), h("label", {}, "Municipalities, separated by commas"), places, h("div", { style: "margin-top:10px" }, h("button", { onclick: e => sweep(e.target) }, "Run sweep")),
+      h("p", { class: "tiny", style: "margin-top:8px" }, "OpenStreetMap shows that a business exists and where. Phone numbers and websites are often missing; the next step reads each business's own site.")),
+      h("div", {}, h("h3", { style: "margin-bottom:8px" }, "A list you have (CSV)"), csv, h("div", { style: "margin-top:10px" }, h("button", { onclick: e => imp(e.target) }, "Import")), h("p", { class: "tiny", style: "margin-top:8px" }, "The Google Maps scraper's CSV works as is. Duplicates are merged and anyone on your do-not-contact list is skipped."))), result) : null));
+}
+
+// ---------- prospects: the filters, the list, the drawer ----------
+const TF_KEYS = ["q", "status", "channel", "source", "category", "city", "minScore", "hasEmail", "hasWebsite", "enriched", "added", "hasDraft", "dnc", "sort"];
+const STATUS_TONE = { Found: "", Drafted: "info", Approved: "accent", Contacted: "warn", Replied: "good", Meeting: "good", Won: "good", Lost: "bad" };
+async function renderProspects() {
+  const tf = state.tf, qs = new URLSearchParams(); for (const k of TF_KEYS) if (tf[k]) qs.set(k, tf[k]); if (state.cid) qs.set("campaign", state.cid); qs.set("limit", tf.limit || 50);
+  const [d, v] = await Promise.all([api("/prospects?" + qs), api("/views")]); state.views = v.views;
+  const redraw = () => { store.set("tf", state.tf); renderProspects(); };
+  const sel = (key, label, rows, fmt = x => x) => h("select", { "aria-label": label, onchange: e => { tf[key] = e.target.value; tf.limit = 50; redraw(); } }, h("option", { value: "" }, label), rows.map(r => h("option", { value: r.v, selected: tf[key] === r.v }, `${fmt(r.v)} (${r.n})`)));
+  const toggle = (key, label) => h("button", { class: tf[key] ? "on" : "", "aria-pressed": String(!!tf[key]), onclick: () => { tf[key] = tf[key] ? "" : "1"; redraw(); } }, label);
+  const search = h("input", { type: "search", class: "grow", placeholder: "Search name, category, city, notes, site, email...", "aria-label": "Search prospects", value: tf.q || "", oninput: e => { tf.q = e.target.value; clearTimeout(search._t); search._t = setTimeout(() => { store.set("tf", tf); renderProspects().then(() => { const s = document.querySelector("input[type=search]"); if (s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); } }); }, 250); } });
+  const viewSel = h("select", { "aria-label": "Saved views", onchange: e => { const x = state.views[e.target.value]; if (x) { state.tf = { ...x }; redraw(); } } }, h("option", { value: "" }, "Saved views"), Object.keys(state.views).map(n => h("option", { value: n }, n)));
+  const active = TF_KEYS.some(k => tf[k]);
+  const stat = d.facets.status;
+  const pipeline = h("div", { class: "chips", role: "group", "aria-label": "Stage" }, h("button", { class: !tf.status ? "on" : "", onclick: () => { tf.status = ""; redraw(); } }, `All ${d.total}`), state.meta.statuses.filter(s => stat.find(x => x.v === s)).map(s => h("button", { class: tf.status === s ? "on" : "", onclick: () => { tf.status = tf.status === s ? "" : s; redraw(); } }, `${s} ${stat.find(x => x.v === s).n}`)));
+  const bulk = state.sel.size ? h("div", { class: "bulk" }, h("b", {}, state.sel.size + " selected"), h("button", { onclick: () => { d.prospects.forEach(p => state.sel.add(p.id)); redraw(); } }, `Select all shown (${d.prospects.length})`),
+    h("select", { id: "bulkst", "aria-label": "Move to stage", style: "width:auto" }, h("option", { value: "" }, "Move to stage..."), state.meta.statuses.map(s => h("option", { value: s }, s))), h("button", { class: "primary", onclick: async () => { const s = document.getElementById("bulkst").value; if (!s) return toast("Pick a stage first."); const r = await api("/prospects/bulk", "POST", { ids: [...state.sel], action: "status", status: s }); state.sel.clear(); toast(`${r.updated} moved to ${s}.`); redraw(); } }, "Apply"),
+    h("button", { onclick: async () => { toast("Reading their websites..."); const r = await api("/prospects/bulk", "POST", { ids: [...state.sel], action: "enrich" }); toast(`${r.updated} websites read.`); redraw(); } }, "Read their sites"),
+    h("button", { class: "danger", onclick: async () => { if (await ask({ title: "Do not contact these?", text: "They go on your permanent do-not-contact list and any open drafts are discarded.", ok: "Exclude", danger: true })) { await api("/prospects/bulk", "POST", { ids: [...state.sel], action: "dnc", reason: "excluded by you" }); state.sel.clear(); redraw(); } } }, "Do not contact"), h("button", { class: "ghost", onclick: () => { state.sel.clear(); redraw(); } }, "Clear")) : null;
+  const rows = d.prospects.map(p => h("tr", { onclick: e => { if (e.target.closest("input,button,a")) return; openDrawer(p.id); }, class: state.sel.has(p.id) ? "sel" : "", tabindex: "0", onkeydown: e => { if (e.key === "Enter") openDrawer(p.id); } },
+    h("td", {}, h("input", { type: "checkbox", "aria-label": "Select " + p.name, checked: state.sel.has(p.id), onchange: e => { e.target.checked ? state.sel.add(p.id) : state.sel.delete(p.id); redraw(); } })),
+    h("td", {}, h("div", { class: "nm" }, p.name), h("div", { class: "sm" }, [p.category, p.city].filter(Boolean).join(" · "))),
+    h("td", {}, h("span", { class: "tag " + (STATUS_TONE[p.status] || "") }, p.status), p.dnc ? h("span", { class: "tag bad", style: "margin-left:6px" }, "do not contact") : null),
+    h("td", {}, h("span", { class: "score" }, p.score, h("i", {}, h("b", { style: `width:${p.score}%` })))),
+    h("td", {}, p.channel ? h("span", { class: "tag " + (p.channel === "email" ? "info" : "") }, p.channel) : h("span", { class: "tiny" }, "none")),
+    h("td", { class: "sm" }, p.n_facts ? p.n_facts + " facts" : p.enriched_at ? "nothing found" : "not read"), h("td", { class: "sm" }, p.open_drafts ? p.open_drafts + " open" : p.last_step ? "message " + p.last_step + " sent" : ""), h("td", { class: "sm" }, p.source)));
+  $app.replaceChildren(shell("prospects", 0, h("div", { class: "head" }, h("div", {}, h("h1", {}, "Prospects"), h("p", { class: "sub" }, `${d.total} match${d.total === 1 ? "es" : ""}${state.cid ? " in this campaign" : " across all campaigns"}.`)), h("div", { class: "sp" }), h("button", { onclick: () => { location.hash = "#/campaigns"; } }, "Add prospects")),
+    pipeline, h("div", { class: "filters" }, search, sel("category", "All categories", d.facets.category), sel("city", "All cities", d.facets.city), sel("source", "All sources", d.facets.source), sel("channel", "All channels", d.facets.channel),
+      h("select", { "aria-label": "Minimum score", onchange: e => { tf.minScore = e.target.value; redraw(); } }, h("option", { value: "" }, "Any score"), [40, 55, 70, 85].map(n => h("option", { value: n, selected: String(tf.minScore) === String(n) }, `Score ${n}+`))),
+      h("select", { "aria-label": "Date added", onchange: e => { tf.added = e.target.value; redraw(); } }, h("option", { value: "" }, "Any date added"), [["0", "Added today"], ["3", "Last 3 days"], ["7", "Last 7 days"], ["old", "Older than 3 weeks"]].map(([x, y]) => h("option", { value: x, selected: tf.added === x }, y))),
+      h("select", { "aria-label": "Sort", onchange: e => { tf.sort = e.target.value; redraw(); } }, [["", "Sort: best score"], ["added", "Newest first"], ["updated", "Recently updated"], ["name", "Name A to Z"], ["status", "By stage"]].map(([x, y]) => h("option", { value: x, selected: (tf.sort || "") === x }, y)))),
+    h("div", { class: "filters" }, toggle("hasEmail", "Has email"), toggle("hasWebsite", "Has website"), h("button", { class: tf.enriched === "0" ? "on" : "", onclick: () => { tf.enriched = tf.enriched === "0" ? "" : "0"; redraw(); } }, "Site not read yet"), toggle("hasDraft", "Has open draft"), toggle("dnc", "Do not contact"), h("span", { class: "sp" }), viewSel,
+      h("button", { onclick: async () => { const name = (await ask({ title: "Save this view", text: "It saves the current filters and sort under a name.", input: true, placeholder: "e.g. Milan, with email, score 70+", ok: "Save" }) || "").trim(); if (!name) return; await api("/views", "PUT", { views: { ...state.views, [name]: { ...tf } } }); toast("View saved."); redraw(); } }, "Save this view"),
+      h("button", { onclick: async () => { const n = viewSel.value; if (!n) return toast("Pick a saved view first."); const x = { ...state.views }; delete x[n]; await api("/views", "PUT", { views: x }); redraw(); } }, "Delete view"), active ? h("button", { onclick: () => { state.tf = {}; redraw(); } }, "Clear filters") : null),
+    bulk, d.prospects.length ? h("div", { class: "tablewrap" }, h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, ""), h("th", {}, "Business"), h("th", {}, "Stage"), h("th", {}, "Score"), h("th", {}, "Channel"), h("th", {}, "Site"), h("th", {}, "Messages"), h("th", {}, "Source"))), h("tbody", {}, rows))) : h("div", { class: "card empty" }, d.total || active ? "Nothing matches these filters. Clear one to see more." : "No prospects yet. Create a campaign and run a sweep, or import a list."),
+    d.total > d.prospects.length ? h("div", { class: "row", style: "justify-content:center;margin:16px 0" }, h("button", { onclick: () => { tf.limit = (+tf.limit || 50) + 50; redraw(); } }, `Show ${Math.min(50, d.total - d.prospects.length)} more`)) : null));
+  if (state.drawer) openDrawer(state.drawer, true);
+}
+
+async function openDrawer(id, keep) {
+  state.drawer = id; document.querySelector(".drawer-back")?.remove(); document.querySelector(".drawer")?.remove();
+  let p; try { p = await api("/prospects/" + id); } catch (e) { toast(e.message); state.drawer = null; return; }
+  const close = () => { state.drawer = null; document.querySelector(".drawer-back")?.remove(); document.querySelector(".drawer")?.remove(); document.removeEventListener("keydown", onKey); };
+  const onKey = e => { if (e.key === "Escape" && !document.querySelector(".modal-back")) close(); }; document.addEventListener("keydown", onKey);
+  const reload = () => { openDrawer(id, true); if (location.hash.startsWith("#/prospects")) renderProspects(); };
+  const act = fn => async e => { e.target.disabled = true; try { await fn(); } catch (er) { toast(er.message); } e.target.disabled = false; };
+  const newDraft = async (step, mode) => { const r = await api("/drafts", "POST", { prospectId: id, step, mode }); toast("Draft created. Check it in the Outbox."); reload(); return r; };
+  const nextStep = Math.min((p.drafts.filter(d => d.status !== "discarded").reduce((m, d) => Math.max(m, d.step), 0) || 0) + 1, 4);
+  const kv = (k, v) => v ? [h("dt", {}, k), h("dd", {}, v)] : [];
+  const notes = h("textarea", { rows: "3", placeholder: "Notes", onchange: e => api("/prospects/" + id, "PATCH", { notes: e.target.value }).then(() => toast("Saved.")) }, p.notes);
+  const statusSel = h("select", { "aria-label": "Stage", onchange: e => api("/prospects/" + id, "PATCH", { status: e.target.value }).then(reload).catch(er => toast(er.message)), disabled: p.dnc }, state.meta.statuses.map(s => h("option", { value: s, selected: s === p.status }, s)));
+  document.body.append(h("div", { class: "drawer-back", onclick: close }), h("aside", { class: "drawer", role: "dialog", "aria-label": p.name },
+    h("div", { class: "row" }, h("h2", {}, p.name), h("span", { class: "tag " + (STATUS_TONE[p.status] || "") }, p.status), p.dnc ? h("span", { class: "tag bad" }, "do not contact") : null, h("span", { class: "sp" }), h("button", { class: "ghost", onclick: close, "aria-label": "Close" }, "Close")),
+    p.dnc ? h("div", { class: "note", style: "margin-top:12px" }, `On your do-not-contact list${p.dnc_reason ? ": " + p.dnc_reason : ""}. No message can be written. `, h("button", { class: "ghost", onclick: act(async () => { await api(`/prospects/${id}/allow`, "POST"); reload(); }) }, "Allow contact again")) : null,
+    h("dl", { class: "kv sec" }, kv("Category", p.category), kv("Address", [p.address, p.city].filter(Boolean).join(", ")), kv("Website", p.website ? h("a", { href: /^https?:/.test(p.website) ? p.website : "https://" + p.website, target: "_blank", rel: "noopener noreferrer" }, p.website) : ""), kv("Email", p.emails.join(", ")), kv("Phone", p.phones.join(", ")),
+      kv("Social", Object.entries(p.socials).map(([k, v]) => h("a", { href: /^https?:/.test(v) ? v : "#", target: "_blank", rel: "noopener noreferrer", style: "margin-right:10px" }, k))), kv("Score", `${p.score} / 100`), kv("Source", p.source + (p.rating ? `, rated ${p.rating} (${p.reviews || 0} reviews)` : ""))),
+    h("div", { class: "row sec" }, statusSel, h("button", { onclick: act(async () => { toast("Reading their website..."); const r = await api(`/prospects/${id}/enrich`, "POST"); toast(r.ok ? `${r.facts} facts, ${r.emails.length} email(s) found.` : "Could not read it: " + r.reason); reload(); }) }, p.enriched_at ? "Read their site again" : "Read their site"), !p.dnc ? h("button", { class: "danger", onclick: async () => { if (await ask({ title: "Do not contact " + p.name + "?", text: "They go on your permanent do-not-contact list and open drafts are discarded.", ok: "Exclude", danger: true })) { await api(`/prospects/${id}/dnc`, "POST", { reason: "excluded by you" }); reload(); } } }, "Do not contact") : null),
+    h("div", { class: "sec" }, h("h3", {}, "Worth mentioning"), p.facts.length ? h("div", { style: "display:grid;gap:8px" }, p.facts.map(f => h("div", { class: "msg" }, f.text, h("small", { style: "margin:6px 0 0" }, f.kind + " · ", f.source_url ? h("a", { href: f.source_url, target: "_blank", rel: "noopener noreferrer" }, "where it says so") : "")))) : h("p", { class: "muted" }, p.enriched_at ? "Nothing specific was found on their site. Write from what you know, or skip them." : "Read their site to find something specific and checkable to mention.")),
+    !p.dnc ? h("div", { class: "sec" }, h("h3", {}, "Write message " + nextStep), h("div", { class: "row" }, h("button", { class: "primary", onclick: act(() => newDraft(nextStep, "skeleton")) }, "Start from a template"), state.me.ai ? h("button", { onclick: act(() => newDraft(nextStep, "ai")) }, "Draft it with the model") : null, h("button", { onclick: act(() => newDraft(nextStep, "blank")) }, "Blank")), h("p", { class: "tiny", style: "margin-top:6px" }, "Every draft is checked against the method and waits in the Outbox until you approve it.")) : null,
+    p.drafts.length ? h("div", { class: "sec" }, h("h3", {}, "Messages"), p.drafts.map(d => h("div", { class: "msg" }, h("small", {}, `message ${d.step} · ${d.status}${d.ai ? " · model draft" : ""}`), h("b", {}, d.subject), "\n" + d.body))) : null,
+    h("div", { class: "sec" }, h("h3", {}, "Replies"), p.messages.length ? h("div", { class: "thread" }, p.messages.map(m => h("div", { class: "msg in" }, h("small", {}, `${m.ts.slice(0, 10)} · ${m.platform}${m.intent ? " · " + m.intent.replace("_", " ") : ""}`), m.text))) : h("p", { class: "muted" }, "None yet."), !p.dnc ? h("div", { style: "margin-top:8px" }, h("button", { onclick: async () => { const text = await ask({ title: "Paste their reply", text: "Coldbrew classifies it. Opt-outs are never saved and exclude them for good.", input: true, textarea: true, ok: "Add reply" }); if (text) { const r = await api(`/prospects/${id}/reply`, "POST", { text }); toast("Reply: " + (r.intent || r.outcome).replace("_", " ")); reload(); } } }, "Paste a reply")) : null),
+    h("div", { class: "sec" }, h("h3", {}, "Notes"), notes), p.events.length ? h("div", { class: "sec" }, h("h3", {}, "History"), h("div", { class: "tiny", style: "display:grid;gap:3px" }, p.events.map(e => h("div", {}, `${e.at.slice(0, 16).replace("T", " ")}  ${e.kind.replace(/_/g, " ")}${e.detail ? ": " + e.detail : ""}`)))) : null));
+}
+
+// ---------- outbox ----------
+async function renderOutbox() {
+  const [dr, fu] = await Promise.all([api("/drafts" + (state.cid ? "?campaign=" + state.cid : "")), api("/followups")]); const tab = store.get("obTab", "approve");
+  const wait = dr.drafts.filter(d => d.status === "draft"), ready = dr.drafts.filter(d => d.status === "approved"), due = fu.due.filter(f => !state.cid || f.campaign_id === state.cid);
+  const tabBtn = (k, label, n) => h("button", { class: tab === k ? "on" : "", onclick: () => { store.set("obTab", k); renderOutbox(); } }, label + (n ? ` (${n})` : ""));
+  const lintBox = l => h("div", { class: "lint" }, (l.issues || []).length ? l.issues.map(i => h("div", { class: i.severity }, i.text)) : h("div", { class: "okline" }, "Passes the method"), h("div", { class: "tiny", style: "padding-left:0" }, `${l.words ?? 0} words, limit ${l.cap ?? 75}`));
+  const card = d => {
+    const subject = h("input", { value: d.subject, "aria-label": "Subject" }), body = h("textarea", { "aria-label": "Message" }, d.body), lint = h("div", {}, lintBox(d.lint)), approve = h("button", { class: "primary" }, "Approve");
+    const live = () => { clearTimeout(live._t); live._t = setTimeout(async () => { const l = await api("/lint", "POST", { prospectId: d.prospect_id, step: d.step, subject: subject.value, body: body.value }); lint.replaceChildren(lintBox(l)); approve.disabled = !l.ok; }, 300); };
+    subject.addEventListener("input", live); body.addEventListener("input", live); approve.disabled = !d.lint.ok;
+    const save = async () => { await api("/drafts/" + d.id, "PATCH", { subject: subject.value, body: body.value }); };
+    return h("div", { class: "draft fadein" }, h("div", { class: "row", style: "margin-bottom:8px" }, h("a", { href: "#", class: "nm", style: "font-weight:700;color:var(--ink);text-decoration:none", onclick: e => { e.preventDefault(); openDrawer(d.prospect_id); } }, d.prospect_name), h("span", { class: "tag" }, `message ${d.step}`), h("span", { class: "tag " + (d.channel === "email" ? "info" : "") }, d.channel || "no channel"), d.ai ? h("span", { class: "tag accent" }, "model draft") : null),
+      subject, h("div", { style: "height:8px" }), body, lint, h("div", { class: "row" }, h("button", { onclick: async e => { e.target.disabled = true; await save(); toast("Saved."); renderOutbox(); } }, "Save"), approve, h("button", { class: "ghost", onclick: async () => { await api(`/drafts/${d.id}/discard`, "POST"); renderOutbox(); } }, "Discard")));
+  };
+  const readyCard = d => {
+    const to = d.emails[0] || "", mailto = to ? `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(d.subject)}&body=${encodeURIComponent(d.body)}` : "";
+    return h("div", { class: "draft fadein" }, h("div", { class: "row", style: "margin-bottom:8px" }, h("b", {}, d.prospect_name), h("span", { class: "tag good" }, "approved"), h("span", { class: "tag" }, `message ${d.step}`), h("span", { class: "tiny" }, to || (d.socials.instagram ? "Instagram" : d.phones[0] || ""))),
+      h("div", { class: "msg" }, h("small", {}, "Subject"), h("b", {}, d.subject), h("small", { style: "margin-top:10px" }, "Message"), d.body),
+      h("div", { class: "row", style: "margin-top:10px" }, mailto ? h("a", { class: "btn primary", href: mailto }, "Open in your mail app") : null, d.socials.instagram && !mailto ? h("a", { class: "btn primary", href: d.socials.instagram, target: "_blank", rel: "noopener noreferrer" }, "Open Instagram") : null,
+        h("button", { onclick: async () => { try { await navigator.clipboard.writeText(`${d.subject}\n\n${d.body}`); toast("Copied."); } catch { toast("Could not copy. Select the text instead."); } } }, "Copy"),
+        h("button", { onclick: async () => { await api(`/drafts/${d.id}/sent`, "POST"); toast("Marked as sent."); renderOutbox(); } }, "I sent it"), h("button", { class: "ghost", onclick: async () => { await api("/drafts/" + d.id, "PATCH", { body: d.body + " " }); await api("/drafts/" + d.id, "PATCH", { body: d.body }); renderOutbox(); } }, "Edit again")));
+  };
+  const dueRow = f => h("div", { class: "draft fadein" }, h("div", { class: "row" }, h("b", {}, f.name), h("span", { class: "tag warn" }, `message ${f.next_step} due`), h("span", { class: "tiny" }, `message ${f.step} sent ${ago(f.sent_at)}, no reply`), h("span", { class: "sp" }), h("button", { class: "primary", onclick: async e => { e.target.disabled = true; try { await api("/drafts", "POST", { prospectId: f.prospect_id, step: f.next_step, mode: "skeleton" }); toast("Draft created."); store.set("obTab", "approve"); renderOutbox(); } catch (er) { toast(er.message); e.target.disabled = false; } } }, "Write it")));
+  const list = tab === "approve" ? wait.map(card) : tab === "send" ? ready.map(readyCard) : due.map(dueRow);
+  $app.replaceChildren(shell("outbox", wait.length + ready.length, h("div", { class: "head" }, h("div", {}, h("h1", {}, "Outbox"), h("p", { class: "sub" }, "Nothing here is sent by Coldbrew. You approve a message, then send it yourself from your own mail or Instagram and mark it as sent.")), h("div", { class: "sp" })),
+    h("div", { class: "chips" }, tabBtn("approve", "Waiting for you", wait.length), tabBtn("send", "Ready to send", ready.length), tabBtn("due", "Follow-ups due", due.length)),
+    list.length ? list : h("div", { class: "card empty" }, tab === "approve" ? "No drafts waiting. Open a prospect and press Write message." : tab === "send" ? "Nothing approved yet." : "No follow-ups are due.")));
+}
+
+// ---------- settings ----------
+async function renderSettings() {
+  const [mail, s] = await Promise.all([api("/mail"), api("/settings")]), msg = h("div", { class: "note", style: "margin-top:12px;display:none" });
+  const say = (t, bad) => { msg.style.display = "block"; msg.textContent = t; msg.style.color = bad ? "var(--bad)" : "var(--ink-2)"; }, guard = fn => async () => { try { await fn(); } catch (e) { say(e.message, true); } };
+  const M = { provider: h("select", { onchange: e => { const x = mail.providers[e.target.value]; M.host.value = x?.host || ""; M.port.value = x?.port || 993; help.textContent = x?.help || ""; } }, Object.keys(mail.providers).map(k => h("option", { value: k, selected: k === (mail.provider || "gmail") }, k))), user: h("input", { type: "email", value: mail.user || "" }), password: h("input", { type: "password", autocomplete: "off", placeholder: mail.configured ? "unchanged" : "App password" }), host: h("input", { value: mail.host || mail.providers.gmail.host }), port: h("input", { type: "number", value: mail.port || 993 }), folders: h("input", { value: (mail.folders || ["INBOX"]).join(", ") }) };
+  const help = h("p", { class: "tiny", style: "margin-top:8px" }, mail.providers[mail.provider || "gmail"].help);
+  const cur = s.ai || { provider: "", baseUrl: "", model: "" }, A = { provider: h("select", { onchange: e => { const d = s.aiProviders[e.target.value]; A.base.value = d?.baseUrl || ""; A.model.value = d?.model || ""; } }, h("option", { value: "" }, "Off"), Object.entries(s.aiProviders).map(([k, v]) => h("option", { value: k, selected: k === cur.provider }, v.label))), base: h("input", { value: cur.baseUrl }), model: h("input", { value: cur.model }), key: h("input", { type: "password", autocomplete: "off", placeholder: cur.hasKey ? "unchanged" : "API key (not needed for Ollama)" }) };
+  const f = (l, i) => h("div", {}, h("label", {}, l), i);
+  $app.replaceChildren(shell("settings", 0, h("div", { class: "head" }, h("div", {}, h("h1", {}, "Settings"), h("p", { class: "sub" }, "Everything stays on this computer. Secrets are stored encrypted."))),
+    h("div", { class: "card" }, h("h2", {}, "Replies: read my inbox"), h("p", { class: "muted", style: "margin-bottom:10px" }, "Read-only. Nothing is flagged, moved, deleted or sent. Replies from businesses you contacted move them to Replied. Opt-outs are never saved and exclude the business for good. Use an app password."),
+      h("div", { class: "grid g-auto" }, f("Provider", M.provider), f("Email address", M.user), f("App password", M.password), f("IMAP host", M.host), f("Port", M.port), f("Folders", M.folders)), help,
+      h("div", { class: "row", style: "margin-top:12px" }, h("button", { class: "primary", onclick: guard(async () => { await api("/mail", "PUT", { provider: M.provider.value, user: M.user.value, password: M.password.value, host: M.host.value, port: +M.port.value, folders: M.folders.value }); toast("Saved."); render(); }) }, "Save"),
+        mail.configured ? [h("button", { onclick: guard(async () => { say("Logging in..."); const r = await api("/mail/test", "POST"); say("Login works. Folders: " + r.folders.slice(0, 8).join(", ")); }) }, "Test login"), h("button", { onclick: guard(async () => { say("Reading mail..."); const r = await api("/mail/check", "POST", { days: 14 }); say(`Read ${r.scanned} new emails: ${r.replies} repl${r.replies === 1 ? "y" : "ies"}, ${r.excluded} excluded${r.attention ? `, ${r.attention} need your attention (angry or legal, never answer them)` : ""}.`); }) }, "Check now"), h("button", { class: "ghost danger", onclick: guard(async () => { await api("/mail", "DELETE"); render(); }) }, "Disconnect")] : null), mail.configured && mail.last_check ? h("p", { class: "tiny", style: "margin-top:8px" }, "Last check " + ago(mail.last_check) + (mail.last_error ? " failed: " + mail.last_error : "")) : null),
+    h("div", { class: "card" }, h("h2", {}, "A model to draft first messages (optional)"), h("p", { class: "muted", style: "margin-bottom:10px" }, "Off by default. With Ollama the text never leaves your computer. Every draft still has to pass the linter and wait for your approval."),
+      h("div", { class: "grid g-auto" }, f("Provider", A.provider), f("Address", A.base), f("Model", A.model), f("API key", A.key)), h("div", { class: "row", style: "margin-top:12px" }, h("button", { class: "primary", onclick: guard(async () => { await api("/settings", "PUT", { ai: A.provider.value ? { provider: A.provider.value, baseUrl: A.base.value, model: A.model.value, apiKey: A.key.value } : null }); toast("Saved."); render(); }) }, "Save"))),
+    h("div", { class: "card" }, h("h2", {}, "Your data"), h("div", { class: "row" }, h("a", { class: "btn", href: "/api/export" }, "Download everything (JSON)"), h("button", { class: "danger", onclick: async () => { const pw = await ask({ title: "Delete your account?", text: "Everything is deleted from this computer. Type your password to confirm.", input: true, ok: "Delete everything", danger: true }); if (pw) { try { await api("/account/delete", "POST", { password: pw }); state.me = null; render(); } catch (e) { toast(e.message); } } } }, "Delete my account"))), msg));
+}
+
+// ---------- router ----------
+async function render() {
+  try {
+    if (!state.me) { renderAuth(); return; }
+    const route = location.hash.replace("#/", "") || "dashboard";
+    const c = await api("/campaigns"); state.campaigns = c.campaigns;
+    if (state.cid && !state.campaigns.find(x => x.id === state.cid)) { state.cid = null; store.set("cid", null); }
+    if (!state.campaigns.length && route !== "campaigns" && route !== "settings") { location.hash = "#/campaigns"; return; }
+    if (route !== "prospects") { document.querySelector(".drawer-back")?.remove(); document.querySelector(".drawer")?.remove(); state.drawer = null; }
+    if (route === "campaigns") await renderCampaigns(); else if (route === "prospects") await renderProspects(); else if (route === "outbox") await renderOutbox(); else if (route === "settings") await renderSettings(); else await renderDashboard();
+  } catch (e) { if (e.status === 401) { state.me = null; renderAuth(); } else $app.replaceChildren(h("div", { class: "auth" }, h("div", { class: "card err" }, e.message))); }
+}
+async function boot() { try { state.meta = await api("/meta"); state.me = await api("/me"); } catch { state.me = null; } render(); }
+addEventListener("hashchange", render);
+boot();
+</script>
+</body>
+</html>

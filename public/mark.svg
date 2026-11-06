@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Coldbrew">
+  <rect width="128" height="128" rx="28" fill="#2B1D14"/>
+  <path d="M40 30h48l-5 70a8 8 0 0 1-8 7H53a8 8 0 0 1-8-7z" fill="#7A4A2A"/>
+  <path d="M40 30h48l-1.6 22H41.6z" fill="#E0C39B"/>
+  <rect x="52" y="60" width="14" height="14" rx="3" fill="#F1E7DA" opacity=".9" transform="rotate(-12 59 67)"/>
+  <rect x="68" y="72" width="12" height="12" rx="3" fill="#F1E7DA" opacity=".75" transform="rotate(14 74 78)"/>
+  <path d="M40 30h48l-5 70a8 8 0 0 1-8 7H53a8 8 0 0 1-8-7z" fill="none" stroke="#D49A5A" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M74 18l-6 12" stroke="#D49A5A" stroke-width="5" stroke-linecap="round"/>
+</svg>
