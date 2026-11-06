@@ -88,6 +88,7 @@ cannot know your recipient's situation. This is not legal advice.
 | `src/replies.mjs`, `src/mail.mjs`, `src/mailutil.mjs`, `src/instagram.mjs` | Reply classification and matching, read-only IMAP, read-only Instagram |
 | `src/scrape.mjs`, `src/digest.mjs` | Running the Google Maps scraper in Docker, the daily digest and its webhook |
 | `src/server.mjs`, `src/db.mjs`, `src/auth.mjs`, `src/secrets.mjs`, `src/scheduler.mjs` | API, SQLite schema, accounts, encryption, mailbox checks |
+| `skills/outreach/` | Agent skill and the message method behind "Copy brief for my AI agent", for the agent you already use |
 | `public/index.html` | The whole interface in one file, no framework, no build step |
 | `scripts/` | `demo-seed.mjs` (synthetic data), `import-anydeals.mjs` (move over an anydeals tracker) |
 
@@ -100,6 +101,13 @@ Successor to [anydeals](https://github.com/ahmedmetered/anydeals), the agent-ski
 ## Honest limits
 
 Inbox and Instagram reading are tested against recorded responses, not a live account. The scraper runner is tested with a fake Docker; it needs Docker running. Google Maps data is a snapshot with gaps by construction, so treat a missing phone or website as "not found", not "does not exist".
+
+## Credits
+
+The message method (one specific observation, one real question, short, honest, no AI tells) is adapted from
+[Harvey](https://github.com/ethanplusai/harvey) by Ethan Rogers (MIT), via anyoutreach and anydeals. The optional Google Maps source
+runs [gosom/google-maps-scraper](https://github.com/gosom/google-maps-scraper) (MIT) in Docker. See [NOTICE.md](NOTICE.md). Coldbrew is an
+independent project and is not affiliated with or endorsed by either.
 
 ## License
 
