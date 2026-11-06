@@ -63,13 +63,13 @@ export async function enrichProspect(p, fetchImpl = fetch) {
   if (!site) return { ok: false, reason: "no website known", emails: [], phones: [], socials: {}, facts: [], signals: {} };
   const origin = new URL(site).origin, found = { emails: [], phones: [], socials: {}, facts: [], signals: {}, pages: [] };
   let robots = ""; try { const r = await get(origin + "/robots.txt", fetchImpl, 50000); robots = r.html; } catch { /* no robots.txt */ }
-  const queue = [site], seen = new Set();
+  const queue = [site], seen = new Set(); let why = "";
   while (queue.length && found.pages.length < 3) {
     const url = queue.shift(); if (seen.has(url)) continue; seen.add(url);
     let path = "/"; try { path = new URL(url).pathname || "/"; } catch { continue; }
     if (!robotsAllows(robots, path)) continue;
-    let page; try { page = await get(url, fetchImpl); } catch { continue; }
-    if (!page.ok) continue;
+    let page; try { page = await get(url, fetchImpl); } catch (e) { why ||= /certificate/i.test(e.cause?.message || e.message) ? "the site's security certificate is broken, so it was not read" : `could not connect (${(e.cause?.message || e.message).slice(0, 60)})`; continue; }
+    if (!page.ok) { why ||= `the site answered ${page.status}`; continue; }
     const x = extractFromHtml(page.html, page.url || url); found.pages.push(page.url || url);
     found.emails.push(...x.emails); found.phones.push(...x.phones); Object.assign(found.socials, x.socials); found.facts.push(...x.facts);
     found.signals = { ...found.signals, ...Object.fromEntries(Object.entries(x.signals).map(([k, v]) => [k, found.signals[k] || v])) };
@@ -80,5 +80,5 @@ export async function enrichProspect(p, fetchImpl = fetch) {
   }
   found.emails = [...new Set(found.emails)].slice(0, 5); found.phones = [...new Set(found.phones)].slice(0, 4);
   const seenText = new Set(); found.facts = found.facts.filter(f => !seenText.has(f.text) && seenText.add(f.text)).slice(0, 10);
-  return { ok: found.pages.length > 0, reason: found.pages.length ? "" : "site could not be read", ...found, domain: domainOf(site) };
+  return { ok: found.pages.length > 0, reason: found.pages.length ? "" : why ? `site could not be read: ${why}` : "site could not be read (robots.txt asks not to, or it has no readable page)", ...found, domain: domainOf(site) };
 }

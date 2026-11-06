@@ -101,13 +101,15 @@ test("the scraper: queries per kind and place, the docker command, and a full ru
   assert.equal((await dockerReady(fakeDocker({ available: false }).spawnImpl)).ok, false); assert.match((await dockerReady(fakeDocker({ available: false }).spawnImpl)).reason, /not running/); assert.equal((await dockerReady(fakeDocker().spawnImpl)).ok, true);
   const { db, uid, cid } = world();
   const csv = "title,category,address,website,phone,review_count,review_rating,latitude,longitude,cid,emails\nStudio Neri,Dentista,Via A 1 Milano,https://neri.it,02 111222,50,4.5,45.4,9.2,111,info@neri.it\nSupermercato X,Supermercato,Via B,,02 333444,10,4.0,45.4,9.2,222,\n";
-  const f = fakeDocker({ csv }), sc = createScraper(db, { spawnImpl: f.spawnImpl, dataDir: path.join(os.tmpdir(), "cb-scrape-test") });
+  const f = fakeDocker({ csv }), sc = createScraper(db, { spawnImpl: f.spawnImpl, dataDir: path.relative(process.cwd(), path.join(os.tmpdir(), "cb-scrape-test")) }); // a relative folder must still reach docker as an absolute path (a real run failed on this)
   core.createCampaign(db, uid, { name: "Filtered", language: "it", filters: { keep: "dent" } }); const fid = 2;
   const job = await sc.start(uid, fid, { kinds: "dentista", places: "Milano", depth: 3, email: true }); assert.equal(job.status, "running");
   await assert.rejects(() => sc.start(uid, fid, { kinds: "x", places: "y" }), /already going/);
   for (let i = 0; i < 40 && sc.get(uid, job.id).status === "running"; i++) await new Promise(r => setTimeout(r, 20));
   const done = sc.get(uid, job.id); assert.equal(done.status, "done"); assert.deepEqual([done.result.found, done.result.added, done.result.filtered], [2, 1, 1]);
   assert.equal(db.prepare("SELECT website FROM prospects WHERE campaign_id = ?").get(fid).website, "https://neri.it"); assert.equal(db.prepare("SELECT source FROM sweeps WHERE campaign_id = ?").get(fid).source, "gmaps");
+  const run = f.calls.find(a => a[0] === "run"), mounted = run[run.indexOf("-v") + 1];
+  assert.ok(path.isAbsolute(mounted.slice(0, mounted.lastIndexOf(":/work"))), "docker needs an absolute host path: " + mounted);
   assert.equal(sc.get(uid + 99, job.id), null, "another account cannot see it");
   const none = createScraper(db, { spawnImpl: fakeDocker({ available: false }).spawnImpl, dataDir: path.join(os.tmpdir(), "cb-scrape-test") });
   await assert.rejects(() => none.start(uid, cid, { kinds: "x", places: "y" }), /not running|not installed/);

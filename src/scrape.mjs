@@ -43,19 +43,26 @@ export function createScraper(db, { spawnImpl = nodeSpawn, dataDir = path.resolv
     if (queries.length > 80) throw Object.assign(new Error("That is more than 80 queries. Split it into smaller runs."), { status: 400 });
     if ([...jobs.values()].some(j => j.status === "running")) throw Object.assign(new Error("A scraper run is already going."), { status: 409 });
     const ready = await dockerReady(spawnImpl); if (!ready.ok) throw Object.assign(new Error(ready.reason), { status: 400 });
-    const id = crypto.randomBytes(4).toString("hex"), dir = path.join(dataDir, id); fs.mkdirSync(dir, { recursive: true });
+    const id = crypto.randomBytes(4).toString("hex"), dir = path.resolve(dataDir, id); fs.mkdirSync(dir, { recursive: true }); // docker needs an absolute host path
     fs.writeFileSync(path.join(dir, "queries.txt"), queries.join("\n") + "\n"); fs.writeFileSync(path.join(dir, "results.csv"), "");
     const name = `coldbrew-scrape-${id}`, job = { id, userId, campaignId, status: "running", queries, startedAt: now(), log: [], name, dir };
     jobs.set(id, job);
     const p = spawnImpl("docker", dockerArgs({ dir, depth, lang: c.language === "en" ? "en" : "it", email, name }), { stdio: ["ignore", "pipe", "pipe"] });
-    const keep = d => { for (const l of String(d).split(/\r?\n/)) if (l.trim()) job.log.push(l.trim().slice(0, 200)); if (job.log.length > 200) job.log.splice(0, 100); };
+    const keep = d => { // the scraper logs JSON lines; show a short human line instead
+      for (const l of String(d).split(/\r?\n/)) {
+        if (!l.trim()) continue; let s = l.trim();
+        if (s[0] === "{") { try { const j = JSON.parse(s); s = j.message || (j.job ? "reading a listing..." : s); } catch { /* keep the raw line */ } }
+        job.log.push(s.slice(0, 200));
+      }
+      if (job.log.length > 200) job.log.splice(0, 100);
+    };
     p.stdout?.on("data", keep); p.stderr?.on("data", keep);
     p.on("error", e => { job.status = "error"; job.error = e.message; job.finishedAt = now(); });
     p.on("close", code => {
       if (job.status === "cancelled") { job.finishedAt = now(); return; }
       try {
         const text = fs.readFileSync(path.join(dir, "results.csv"), "utf8"), found = parseProspectCsv(text, "gosom");
-        if (code !== 0 && !found.length) { job.status = "error"; job.error = `The scraper stopped with code ${code}. ${job.log.slice(-1)[0] || ""}`.trim(); }
+        if (code !== 0 && !found.length) { job.status = "error"; job.error = `The scraper stopped with code ${code}. ${job.log.filter(l => !/^Run .docker run --help/.test(l)).slice(-2).join(" | ")}`.trim(); }
         else {
           const r = core.addProspects(db, userId, campaignId, found);
           db.prepare("INSERT INTO sweeps (campaign_id, source, query, found, added, at) VALUES (?, 'gmaps', ?, ?, ?, ?)").run(campaignId, `${queries.length} queries`, found.length, r.added, now());

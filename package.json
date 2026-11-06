@@ -24,5 +24,13 @@
     "self-hosted",
     "local-first",
     "sqlite"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ahmedmetered/coldbrew.git"
+  },
+  "homepage": "https://github.com/ahmedmetered/coldbrew#readme",
+  "bugs": {
+    "url": "https://github.com/ahmedmetered/coldbrew/issues"
+  }
 }
