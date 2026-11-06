@@ -42,14 +42,16 @@ then add prospects.
 ## How it works
 
 1. **Campaign.** A vertical in a place, with a profile: sender, offer, the only claims allowed, the opt-out line, and which categories count.
-2. **Find prospects.** OpenStreetMap (free, no key, one query per municipality), the Google Maps scraper's CSV, or any CSV.
-   Duplicates merge, filters run before ranking, and the score favours businesses you can actually reach.
+2. **Find prospects.** OpenStreetMap (free, no key, one query per municipality), the Google Maps scraper, or any CSV. The scraper
+   (gosom, in Docker) can be run from the app, or you can import its CSV. Duplicates merge, filters run before ranking, and the
+   score favours businesses you can actually reach.
 3. **Read their site.** At most three pages of the business's own site, robots.txt respected, for email, phone, social links and things worth mentioning.
 4. **Draft.** From a template, by hand, or with an optional model (Ollama locally, or your own key). Always linted.
 5. **Approve and send.** Approved drafts open in your mail app or copy to the clipboard. You send, then press "I sent it".
 6. **Follow-ups.** Message 2 around day 5, message 3 around day 10, a breakup around day 14, each waiting for your approval. A reply ends the sequence.
-7. **Replies.** Read-only IMAP matches replies to prospects and classifies them (interested, question, objection, wrong person, not interested, opt-out, angry or legal).
-8. **Dashboard.** Funnel, activity, reply rate by message, angle and category, time to a reply, reply types, channels, prospect quality and source yield.
+7. **Replies.** Read-only IMAP, and optionally Instagram (Instagram API with Instagram Login, read-only), match replies to prospects and classify them (interested, question, objection, wrong person, not interested, opt-out, angry or legal). Instagram does nothing until you connect a token.
+8. **Daily digest.** What needs you today (replies, drafts to approve, messages to send, follow-ups due, never message text), on the dashboard and optionally pushed to your phone through ntfy.sh, Discord or Slack.
+9. **Dashboard.** Funnel, activity, reply rate by message, angle and category, time to a reply, reply types, channels, prospect quality and source yield.
 
 ![The prospect list with its filters](docs/prospects.jpg)
 
@@ -83,7 +85,8 @@ cannot know your recipient's situation. This is not legal advice.
 | `src/sources.mjs`, `src/enrich.mjs`, `src/normalize.mjs`, `src/rank.mjs` | Sources, reading a business's site, dedupe, filter and score (pure parts tested with fixtures) |
 | `src/lint.mjs`, `src/draft.mjs`, `src/ai.mjs` | The method as code, templates, optional model drafts |
 | `src/core.mjs` | Campaigns, prospects, do-not-contact, drafts and approval, follow-ups, the dashboard numbers |
-| `src/replies.mjs`, `src/mail.mjs`, `src/mailutil.mjs` | Reply classification and matching, read-only IMAP |
+| `src/replies.mjs`, `src/mail.mjs`, `src/mailutil.mjs`, `src/instagram.mjs` | Reply classification and matching, read-only IMAP, read-only Instagram |
+| `src/scrape.mjs`, `src/digest.mjs` | Running the Google Maps scraper in Docker, the daily digest and its webhook |
 | `src/server.mjs`, `src/db.mjs`, `src/auth.mjs`, `src/secrets.mjs`, `src/scheduler.mjs` | API, SQLite schema, accounts, encryption, mailbox checks |
 | `public/index.html` | The whole interface in one file, no framework, no build step |
 | `scripts/` | `demo-seed.mjs` (synthetic data), `import-anydeals.mjs` (move over an anydeals tracker) |
@@ -94,9 +97,9 @@ npm test     # no network, a few seconds
 
 Successor to [anydeals](https://github.com/ahmedmetered/anydeals), the agent-skill version of the same method. Design notes are in [DESIGN.md](DESIGN.md).
 
-## Not built yet
+## Honest limits
 
-Instagram reply reading, running the Google Maps scraper for you (its CSV imports today), and a daily digest.
+Inbox and Instagram reading are tested against recorded responses, not a live account. The scraper runner is tested with a fake Docker; it needs Docker running. Google Maps data is a snapshot with gaps by construction, so treat a missing phone or website as "not found", not "does not exist".
 
 ## License
 

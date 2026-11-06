@@ -14,6 +14,9 @@ import { aiConfigFromInput, ollamaModels, AI_PROVIDERS } from "./ai.mjs";
 import { processIncoming } from "./replies.mjs";
 import { accountConfig, accountFromInput, testLogin, checkReplies, PROVIDERS } from "./mail.mjs";
 import { encrypt, decrypt } from "./secrets.mjs";
+import { checkInstagram, refreshInstagramToken, testInstagram } from "./instagram.mjs";
+import { buildDigest, sendWebhook, digestSettings } from "./digest.mjs";
+import { createScraper } from "./scrape.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(here, "..", "public");
@@ -21,7 +24,8 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; ch
 const cap = (v, n) => String(v ?? "").slice(0, n);
 const J = (v, d) => { try { return v ? JSON.parse(v) : d; } catch { return d; } };
 
-export function createApp(db, { secureCookies = false, aiFetch = fetch, osmFetch = fetch, siteFetch = fetch } = {}) {
+export function createApp(db, { secureCookies = false, aiFetch = fetch, osmFetch = fetch, siteFetch = fetch, igFetch = fetch, hookFetch = fetch, scraper = null } = {}) {
+  const scrapers = scraper || createScraper(db, { dataDir: path.join(process.env.DATA_DIR || path.resolve("data"), "scrape") });
   const sendJson = (res, status, body, extra = {}) => { const s = JSON.stringify(body); res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...extra }); res.end(s); };
   const readBody = (req, limit = 1e6) => new Promise((resolve, reject) => {
     let n = 0; const chunks = [];
@@ -221,6 +225,45 @@ export function createApp(db, { secureCookies = false, aiFetch = fetch, osmFetch
       if (!r.configured) throw auth.httpErr(400, "Connect a mailbox first."); if (r.error) throw auth.httpErr(502, r.error);
       return sendJson(res, 200, r);
     }
+    // ---- Instagram replies (read-only; nothing runs until a token is saved)
+    const igRow = () => db.prepare("SELECT * FROM social_accounts WHERE user_id = ? AND platform = 'instagram'").get(uid);
+    if (p === "/api/instagram" && method === "GET") { const r = igRow(); return sendJson(res, 200, r ? { configured: true, username: r.username, saved_at: r.saved_at, last_check: r.last_check, last_result: J(r.last_result, null), last_error: r.last_error } : { configured: false }); }
+    if (p === "/api/instagram" && method === "PUT") {
+      const token = String(body.token || "").trim(); if (!token) throw auth.httpErr(400, "Paste the access token.");
+      let who; try { who = await testInstagram(token, igFetch); } catch (e) { throw auth.httpErr(400, e.message); }
+      db.prepare("INSERT INTO social_accounts (user_id, platform, token_enc, username, saved_at) VALUES (?, 'instagram', ?, ?, ?) ON CONFLICT(user_id, platform) DO UPDATE SET token_enc = excluded.token_enc, username = excluded.username, saved_at = excluded.saved_at, last_error = NULL").run(uid, encrypt(token), who.username, now());
+      return sendJson(res, 200, { configured: true, username: who.username });
+    }
+    if (p === "/api/instagram" && method === "DELETE") { db.prepare("DELETE FROM social_accounts WHERE user_id = ? AND platform = 'instagram'").run(uid); return sendJson(res, 200, { ok: true }); }
+    if (p === "/api/instagram/check" && method === "POST") {
+      const r = await checkInstagram(db, uid, { days: Math.min(Math.max(+body.days || 14, 1), 90), fetchImpl: igFetch });
+      if (!r.configured) throw auth.httpErr(400, "Connect Instagram first."); if (r.error) throw auth.httpErr(502, r.error); return sendJson(res, 200, r);
+    }
+    if (p === "/api/instagram/refresh" && method === "POST") {
+      const r = igRow(); if (!r) throw auth.httpErr(400, "Connect Instagram first.");
+      try { const t = await refreshInstagramToken(decrypt(r.token_enc), igFetch); db.prepare("UPDATE social_accounts SET token_enc = ?, saved_at = ? WHERE user_id = ? AND platform = 'instagram'").run(encrypt(t.token), now(), uid); return sendJson(res, 200, { ok: true, expiresInDays: t.expiresInDays }); }
+      catch (e) { throw auth.httpErr(502, e.message); }
+    }
+
+    // ---- the daily digest
+    if (p === "/api/digest" && method === "GET") { const last = J(getSetting(uid, "digest_json"), null); return sendJson(res, 200, { settings: digestSettings(db, uid), digest: buildDigest(db, uid), last }); }
+    if (p === "/api/digest/settings" && method === "PUT") {
+      const w = cap(body.webhook, 400).trim(); if (w && !/^https?:\/\//i.test(w)) throw auth.httpErr(400, "The notification address must start with http:// or https://");
+      putSetting(uid, "digest_webhook", w); putSetting(uid, "digest_hour", String(Math.min(23, Math.max(0, parseInt(body.hour, 10) || 0)))); putSetting(uid, "digest_enabled", body.enabled === false ? "0" : "1");
+      return sendJson(res, 200, digestSettings(db, uid));
+    }
+    if (p === "/api/digest/test" && method === "POST") {
+      const s = digestSettings(db, uid); if (!s.webhook) throw auth.httpErr(400, "Save a notification address first.");
+      try { await sendWebhook(s.webhook, "Coldbrew test", buildDigest(db, uid).text, hookFetch); return sendJson(res, 200, { ok: true }); } catch (e) { throw auth.httpErr(502, e.message); }
+    }
+
+    // ---- the Google Maps scraper (optional, needs Docker)
+    if (p === "/api/scrape/ready" && method === "GET") return sendJson(res, 200, await scrapers.ready());
+    if (p === "/api/scrape/latest" && method === "GET") return sendJson(res, 200, { job: scrapers.latest(uid) });
+    if ((m = p.match(/^\/api\/campaigns\/(\d+)\/scrape$/)) && method === "POST") return sendJson(res, 202, { job: await scrapers.start(uid, +m[1], { kinds: body.kinds, places: body.places, depth: +body.depth || 5, email: !!body.email }) });
+    if ((m = p.match(/^\/api\/scrape\/([a-f0-9]+)\/cancel$/)) && method === "POST") return sendJson(res, 200, { cancelled: scrapers.cancel(uid, m[1]) });
+    if ((m = p.match(/^\/api\/scrape\/([a-f0-9]+)$/)) && method === "GET") { const j = scrapers.get(uid, m[1]); if (!j) throw auth.httpErr(404, "Not found."); return sendJson(res, 200, { job: j }); }
+
     if (p === "/api/settings" && method === "GET") { const ai = getSetting(uid, "ai"); return sendJson(res, 200, { ai: ai ? { ...JSON.parse(ai), hasKey: !!getSetting(uid, "ai_key") } : null, aiProviders: AI_PROVIDERS }); }
     if (p === "/api/settings" && method === "PUT") {
       if ("ai" in body) {

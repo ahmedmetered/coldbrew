@@ -54,6 +54,10 @@ CREATE TABLE IF NOT EXISTS mail_accounts (
   user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, provider TEXT NOT NULL, mail_user TEXT NOT NULL, pass_enc TEXT NOT NULL, host TEXT NOT NULL,
   port INTEGER NOT NULL, secure INTEGER NOT NULL DEFAULT 1, folders_json TEXT NOT NULL DEFAULT '["INBOX"]', last_check TEXT, last_result TEXT, last_error TEXT
 );
+CREATE TABLE IF NOT EXISTS social_accounts (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, platform TEXT NOT NULL, token_enc TEXT NOT NULL, username TEXT DEFAULT '', saved_at TEXT NOT NULL,
+  last_check TEXT, last_result TEXT, last_error TEXT, PRIMARY KEY (user_id, platform)
+);
 CREATE TABLE IF NOT EXISTS sweeps (
   id INTEGER PRIMARY KEY, campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE, source TEXT NOT NULL, query TEXT DEFAULT '',
   found INTEGER NOT NULL DEFAULT 0, added INTEGER NOT NULL DEFAULT 0, error TEXT DEFAULT '', at TEXT NOT NULL
