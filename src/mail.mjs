@@ -23,7 +23,7 @@ export function accountFromInput(input, encrypt) {
 async function connect(cfg) {
   let ImapFlow;
   try { ({ ImapFlow } = await import("imapflow")); } catch { throw new Error("Reading replies needs two optional packages. Run: npm install"); }
-  const open = async user => { const c = new ImapFlow({ host: cfg.host, port: cfg.port, secure: cfg.secure, auth: { user, pass: cfg.password }, logger: false }); await c.connect(); return c; };
+  const open = async user => { const c = new ImapFlow({ host: cfg.host, port: cfg.port, secure: cfg.secure, auth: { user, pass: cfg.password }, logger: false }); try { await c.connect(); return c; } catch (e) { try { c.close(); } catch { /* already closed */ } throw e; } }; // a failed login must not leave its socket open
   try { return await open(cfg.user); }
   catch (e) { try { return await open(cfg.user.split("@")[0]); } catch { throw new Error(`Login failed on ${cfg.host}: ${e.message}. ${PROVIDERS[cfg.provider]?.help || ""}`.trim()); } } // some providers want only the part before the @
 }

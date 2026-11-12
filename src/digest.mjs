@@ -39,7 +39,7 @@ export async function runDigestIfDue(db, userId, { at = new Date(), fetchImpl = 
   const last = db.prepare("SELECT v FROM settings WHERE user_id = ? AND k = 'digest_last'").get(userId)?.v;
   if (at.getHours() < s.hour || (last && new Date(last).toDateString() === at.toDateString())) return null;
   const d = buildDigest(db, userId, last || new Date(at.getTime() - 864e5).toISOString());
-  db.prepare("INSERT INTO settings (user_id, k, v) VALUES (?, 'digest_last', ?) ON CONFLICT(user_id, k) DO UPDATE SET v = excluded.v").run(userId, d.at);
+  db.prepare("INSERT INTO settings (user_id, k, v) VALUES (?, 'digest_last', ?) ON CONFLICT(user_id, k) DO UPDATE SET v = excluded.v").run(userId, at.toISOString()); // the time this run was for, so "once a day" is judged against the same clock as `at`
   db.prepare("INSERT INTO settings (user_id, k, v) VALUES (?, 'digest_json', ?) ON CONFLICT(user_id, k) DO UPDATE SET v = excluded.v").run(userId, JSON.stringify(d));
   if (s.webhook && !d.empty) { try { await sendWebhook(s.webhook, `Coldbrew: ${d.waiting + d.ready + d.due + d.replies} to look at`, d.text, fetchImpl); } catch (e) { log(`digest for user ${userId}: ${e.message}`); } }
   return d;
